@@ -1,0 +1,47 @@
+{
+	"calendars" : [
+		{
+			"cal_primary" : "https://example.com/remote.php/dav",
+			"cal_name" : "CalendarName",
+			"cal_user" : "UserName",
+			"cal_passwd" : "PassWD",
+			"time_zone" : "Europe/Berlin",
+			"all_day" : false,
+			"force_time" : true,
+			"force_start" : "21:00",
+			"force_end" : "23:59",
+			"ignore_planned" : false,
+			"ignore_descriptions": true,
+			"title_prefix" : "BD CLUB",
+			"tags" : ["BD","ILSC"],
+			"color" : "lightskyblue",
+			"default_location" : "BD CLUB",
+			"sanitize_stati" : true
+		},
+		{
+			"cal_primary" : "https://example.com/remote.php/dav",
+			"cal_name" : "CalendarName",
+			"cal_user" : "UserName",
+			"cal_passwd" : "PassWD",
+			"time_zone" : "Europe/Berlin",
+			"all_day" : false,
+			"force_time" : true,
+			"force_start" : "21:00",
+			"force_end" : "23:59",
+			"ignore_planned" : false,
+			"ignore_descriptions": true,
+			"title_prefix" : "bi-Club",
+			"tags" : ["bi","ILSC"],
+			"color" : "lightskyblue",
+			"default_location" : "bi-Club",
+			"sanitize_stati" : true
+		},
+	],
+	"target" : {
+		"cal_primary" : "https://example.com/remote.php/dav",
+		"cal_name" : "CalendarName",
+		"cal_user" : "UserName",
+		"cal_passwd" : "PassWD",
+		"time_zone" : "Europe/Berlin"
+	}
+}
