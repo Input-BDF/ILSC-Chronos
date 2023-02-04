@@ -337,8 +337,8 @@ class CalendarHandler(object):
         self.events_data = {}
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
         start = time.time()
-        logger.debug('Reading Events')
-        for calendar in self.principal.calendars():
+        logger.debug('Reading Events') 
+        for calendar in self.available_calendars():
             if calendar and calendar.name == self.cal_name:
                 self.calendar = calendar
                 start_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days = RANGE_MIN)
@@ -365,6 +365,13 @@ class CalendarHandler(object):
         #dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
 
+    def available_calendars(self):
+        cals = self.principal.calendars()
+        logger.info(f'Available calendars on {self.cal_name}:')
+        for cal in cals:
+            logger.info(f'\t{cal.name}')
+        return cals
+    
     def read_event(self, calEvent: caldav.Event):
         '''read event data'''
         cal = Calendar.from_ical(calEvent.data)
