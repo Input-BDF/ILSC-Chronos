@@ -1,6 +1,6 @@
 [app]
 #Cron running to check for updates run full data-collector every day at 0000h
-datacron = 0
+datacron = 10,20,30,40,50
 #run gspread and caldav parser every n-th hour of day
 appcron = 4
 timezone = Europe/Berlin

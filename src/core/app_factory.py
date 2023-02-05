@@ -442,7 +442,7 @@ class AppFactory:
     def init_schedulers(self):
         #self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)
         self.scheduler.add_job(self.cron_app, 'cron', id="smallfish", hour=f'*/{self.config.get("app","appcron")}', minute=0)
-        #self.scheduler.add_job(self.cron_app, 'cron', id="smallfish", minute=f'*/{self.config.get("app","appcron")}')
+        self.scheduler.add_job(self.cron_app, 'cron', id="catfish", minute=f'{self.config.get("app","datacron")}')
         self.scheduler.start()
     
     def run(self):
@@ -456,12 +456,15 @@ class AppFactory:
         self.active = False
     
     def cron_app(self):
-        self.read_calendars()
-        logger.debug('Done parsing source calendars')
-        self.sanitize_event_stati()
-        logger.debug('Cleaning up')
-        self.sync_calendars()
-        logger.debug('--== All done for this run ==--')
+        try:
+            self.read_calendars()
+            logger.debug('Done parsing source calendars')
+            self.sanitize_event_stati()
+            logger.debug('Cleaning up')
+            self.sync_calendars()
+            logger.debug('--== All done for this run ==--')
+        except Exception as ex:
+            logger.critical(f'Cron excecution failed. Reason {ex}')
     
     def sync_calendars(self):
         for c in self.calendars:

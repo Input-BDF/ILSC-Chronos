@@ -220,7 +220,7 @@ class Config(object):
         self.app = ConfigSection(
                 ConfigValue('timezone', value=None, default='Europe/Berlin'),
                 #run gspread and caldav on n-th hour of day
-                ConfigValue('datacron', int, value=None, default=6),
+                ConfigValue('datacron', default='10'),
                 #run gspread and caldav parser every n-th hour of day
                 ConfigValue('appcron', int, value=None, default=4),
                 ConfigValue('app_id', default='Chronos'),
