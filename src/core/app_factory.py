@@ -326,6 +326,8 @@ class ILSCEvent(object):
 class CalendarHandler(object):
     
     def __init__(self):
+        self.last_check = TimeZone.localize(datetime.now())      
+        
         self.cal_primary = None
         self.cal_name = None
         self.cal_user = None
@@ -471,18 +473,18 @@ class AppFactory:
         for c in self.calendars:
             c.read()
             
-    def sanitize_event_stati(self):
+    def sanitize_events(self):
         for c in self.calendars:
             if c.sanitize_stati or c.iconize:
                 for _, e in c.events_data.items():
-                    save = False
-                    if c.sanitize_stati:
-                        save = bool(save + e.update_state_by_title())
-                    if c.iconize: 
-                        #TODO: check last modified date cause so it will update every run
-                        save = bool(save + e.set_title_icons())
-                    if save:
-                        e.save()
+                    if e.last_modified.astimezone(pytz.utc) > c.last_check.astimezone(pytz.utc):
+                        save = False
+                        if c.sanitize_stati:
+                            save = bool(save + e.update_state_by_title())
+                        if c.iconize: 
+                            save = bool(save + e.set_title_icons())
+                        if save:
+                            e.save()
     
     def init_schedulers(self):
         #self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)
@@ -504,7 +506,7 @@ class AppFactory:
         try:
             self.read_calendars()
             logger.debug('Done parsing source calendars')
-            self.sanitize_event_stati()
+            self.sanitize_events()
             logger.debug('Cleaning up')
             self.sync_calendars()
             logger.debug('--== All done for this run ==--')
@@ -514,6 +516,7 @@ class AppFactory:
     def sync_calendars(self):
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
+            c.last_check = TimeZone.localize(datetime.now())
             logger.success(f'Done comparing with "{c.cal_name}". {len(changed)} entries updated. {len(new)} entries added. {len(deleted)} entries deleted.')
     
     def sync_calendar(self, calendar: CalendarHandler) -> (dict, dict, dict):
