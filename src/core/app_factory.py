@@ -20,6 +20,7 @@ from icalendar.prop import vCategory
 from __main__ import appConfig
 
 from core.log_factory import get_app_logger
+import icalendar
 
 logger = get_app_logger()
 
@@ -44,9 +45,16 @@ class ILSCEvent(object):
         
         self.calDAV = None
     
+    def __repr__(self):
+        return f"ILSCEvent - {self.date} | {self.title}"
+    
     @property
     def title(self):
         return self._clear_title(self.ical.get('summary')) if self.ical else 'undefined'
+    
+    @property
+    def safe_title(self):
+        return re.sub(r'[^\x00-\x7F]+','', self.title)
     
     @property
     def ical(self) -> caldav.Event:
@@ -157,7 +165,7 @@ class ILSCEvent(object):
 
     @property
     def md5_string(self):
-        return f'{self.date}_{self.title}_{self.description}'.encode('utf-8')
+        return f'{self.date}_{self.safe_title}_{self.description}'.encode('utf-8')
     
     @property
     def md5(self):
@@ -260,29 +268,54 @@ class ILSCEvent(object):
         if ( src_event.source.ignore_planned and src_event.is_planned ) or src_event.is_confidential:
             #DELETE rather than save
             self.calDAV.delete()
-            logger.success(f'Deleted {self.date} | {self.title} out of the row in "{src_event.source.cal_name}".')
+            logger.success(f'Deleted {self.date} | {self.safe_title} out of the row in "{src_event.source.cal_name}".')
         else:
             self.calDAV.save()
         return self
     
-    def update_by_title(self):
-        if self.title.startswith("?"):# or self.title.endswith("?"):
-            try:
+    def set_title_icons(self):
+        try:
+            icons = set(self.categories).intersection(set(self.source.icons))
+            
+            if icons:
+                icon_str = ""
+                for i in icons:
+                    icon_str += self.source.icons[i]
+                _new_title = icalendar.vText(f"{icon_str} | {self.title}")
+                self.calDAV.icalendar_component['summary'] = _new_title
+                logger.success(f"Event icons set for {self.date} | {self.safe_title}")
+                return True
+            #return False
+        except Exception as ex:
+            logger.error(f"Could not set event icons for {self.date} | {self.safe_title} - {ex}")
+        
+        return False
+    
+    def update_state_by_title(self):
+        try:
+            if self.title.startswith("?"):# or self.title.endswith("?"):
                 self.calDAV.icalendar_component['status'] = 'TENTATIVE'
-                self.calDAV.icalendar_component['summary'] = self.calDAV.icalendar_component['summary'].lstrip("?")
-                self.calDAV.save()
-                self.calDAV.load()
-                logger.success(f"Set correct visibility for {self.date} | {self.title}")
-            except Exception as ex:
-                logger.error(f"Could not set correct visibility for {self.date} | {self.title} - {ex}")
-            
-            
+                self.calDAV.icalendar_component['summary'] = icalendar.vText(self.calDAV.icalendar_component['summary'].lstrip("?"))
+                logger.success(f"Set correct visibility for {self.date} | {self.safe_title}")
+                return True
+        except Exception as ex:
+            logger.error(f"Could not set correct visibility for {self.date} | {self.safe_title} - {ex}")
+        
+        return False
+    
+    def save(self):
+        try:
+            self.calDAV.save()
+            self.calDAV.load()
+            logger.success(f"Updated {self.date} | {self.safe_title}")
+        except Exception as ex:
+            logger.error(f"Could not update for {self.date} | {self.safe_title} - {ex}")
     
     def __eq__(self, other):
         if self.md5 == other.md5:
             return True
         else:
-            logger.debug(f'Changed event found: {self.date} | {self.title}')
+            logger.debug(f'Changed event found: {self.date} | {self.safe_title}')
             logger.debug(f'{self.source.cal_name}: {self.md5_string}')
             logger.debug(f'{self.md5}')
             logger.debug('vs:')
@@ -312,12 +345,14 @@ class CalendarHandler(object):
         self.default_location = None
         
         self.sanitize_stati = False
+        self.iconize = False
         
         self.events_data = {}
         
         self.client = None
         self.calendar = None
         self.principal = None
+        self.icons = {}
         
     def config(self, conf_data):
         for key, val in conf_data.items():
@@ -409,21 +444,24 @@ class AppFactory:
     
     def create(self):
         
-        _td, _cd = self.read_cal_config()
-        self.set_calendars(_td, _cd)
+        _td, _cd, _icons = self.read_cal_config()
+        
+        self.set_calendars(_td, _cd, _icons)
         
         logger.debug('Base elements created')
     
     def read_cal_config(self):
-        with open(self.config.get('calendars', 'file'), 'r') as f:
+        with open(self.config.get('calendars', 'file'), 'r', encoding='utf-8') as f:
             _data = json.load(f)
-        return _data['target'], _data['calendars']
+        return _data['target'], _data['calendars'], _data['icons']
         
-    def set_calendars(self, target_data : list, calendars_data : dict):
+    def set_calendars(self, target_data : list, calendars_data : dict, icons : dict):
+        target_data['icons'] = icons
         self.target = CalendarHandler()
         self.target.config(target_data)
         
         for cal in calendars_data:
+            cal['icons'] = icons
             _calendar = CalendarHandler()
             _calendar.config(cal)
             self.calendars.append(_calendar)
@@ -435,9 +473,16 @@ class AppFactory:
             
     def sanitize_event_stati(self):
         for c in self.calendars:
-            if c.sanitize_stati:
+            if c.sanitize_stati or c.iconize:
                 for _, e in c.events_data.items():
-                    e.update_by_title()
+                    save = False
+                    if c.sanitize_stati:
+                        save = bool(save + e.update_state_by_title())
+                    if c.iconize: 
+                        #TODO: check last modified date cause so it will update every run
+                        save = bool(save + e.set_title_icons())
+                    if save:
+                        e.save()
     
     def init_schedulers(self):
         #self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)
@@ -512,7 +557,7 @@ class AppFactory:
                 if WIPE_ON_TARGET and target_cal[eUID].is_chronos_origin:
                     del_event = target_cal[eUID]
                     del_event.calDAV.delete()
-                    logger.debug(f'Deleted: {del_event.date} | {del_event.title}')
+                    logger.debug(f'Deleted: {del_event.date} | {del_event.safe_title}')
                     deleted[eUID] = del_event
             except Exception as ex:
                 logger.error(f'Could not delete obsolete event: {ex}')
@@ -531,7 +576,7 @@ class AppFactory:
                 logger.debug(f'Ignoring confidential event: {new_event.date}')
                 continue
             if ( calendar.ignore_planned and new_event.is_planned ) or new_event.is_canceled:
-                logger.debug(f'Ignoring {new_event.status} event: {new_event.date} | {new_event.title}')
+                logger.debug(f'Ignoring {new_event.status} event: {new_event.date} | {new_event.safe_title}')
                 #skip planned events
                 continue
             try: 
@@ -542,10 +587,10 @@ class AppFactory:
                 _cal.add_component(vevent)
                 _new = _cal.to_ical()
                 self.target.calendar.add_event(_new, no_overwrite=True, no_create=False)
-                logger.debug(f'Created: {new_event.date} | {new_event.title}')
+                logger.debug(f'Created: {new_event.date} | {new_event.safe_title}')
                 new_events[eUID] = new_event
             except Exception as ex:
                 logger.error(f'Could not create new event: {ex}')
                 if new_event is not None and hasattr(new_event, 'title') and hasattr(new_event, 'date'):
-                    logger.error(f'Affected event: {new_event.title} {new_event.date}')
+                    logger.error(f'Affected event: {new_event.safe_title} {new_event.date}')
         return new_events

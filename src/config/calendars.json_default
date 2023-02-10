@@ -16,7 +16,8 @@
 			"tags" : ["BD","ILSC"],
 			"color" : "lightskyblue",
 			"default_location" : "BD CLUB",
-			"sanitize_stati" : true
+			"sanitize_stati" : true,
+			"iconize" : true
 		},
 		{
 			"cal_primary" : "https://example.com/remote.php/dav",
@@ -34,7 +35,8 @@
 			"tags" : ["bi","ILSC"],
 			"color" : "lightskyblue",
 			"default_location" : "bi-Club",
-			"sanitize_stati" : true
+			"sanitize_stati" : true,
+			"iconize" : true
 		},
 	],
 	"target" : {
@@ -43,5 +45,21 @@
 		"cal_user" : "UserName",
 		"cal_passwd" : "PassWD",
 		"time_zone" : "Europe/Berlin"
+	},
+	"icons_non_encode" : {
+	"Band" : "🎸",
+	"DJ" : "🎧",
+	"Lesung" : "📖",
+	"Special" : "✨",
+	"Meeting" : "📅",
+	"Treffen" : "📅"
+	},
+	"icons" : {
+		"Band": "\ud83c\udfb8",
+		"DJ": "\ud83c\udfa7",
+		"Lesung": "\ud83d\udcd6",
+		"Special": "\u2728",
+		"Meeting": "\ud83d\udcc5",
+		"Treffen": "\ud83d\udcc5"
 	}
 }
