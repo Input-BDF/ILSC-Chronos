@@ -207,7 +207,24 @@ class ILSCEvent(object):
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
     
-    def create_ical_event(self):
+    def sanitize_description(self) -> vText:
+        try:
+            _desc = self.description.to_ical().decode('utf-8')
+        except:
+            _desc = self.description.to_ical()
+        #Remove multiline comments
+        _reg_group = r"(###.*(?:###\\n|###))"
+        _desc = re.sub(_reg_group,'', _desc)
+        #Remove single line Comments
+        _reg_line = r"#[^\\]*(?:\\[\s\S][^\\n]*)*\\n"
+        _desc = re.sub(_reg_line,'', _desc)
+        #Remove triple newlines
+        _reg_double = r"(\\n\\n\\n)"
+        _desc = re.sub(_reg_double,'', _desc)
+        
+        return icalendar.vText(_desc)
+    
+    def create_ical_event(self, iconize = False) -> icalEvent:
         new_event=icalEvent()
         _now = TimeZone.localize(datetime.now())
 
@@ -217,10 +234,10 @@ class ILSCEvent(object):
         new_event.add('dtstamp', _now)
         new_event.add('dtstart', self.date_start)
         new_event.add('dtend', self.date_end)
-        
         new_event.add('summary', self.prefixed_title)
+        
         if self.source.ignore_descriptions == False and self.description:
-            new_event.add('description', self.description)
+            new_event.add('description', self.sanitize_description())
         if self.location == None:
             new_event.add('location', self.source.default_location)
         else:
@@ -251,7 +268,7 @@ class ILSCEvent(object):
             #add description to VEVENT
             if 'description' not in self.calDAV.vobject_instance.vevent.contents.keys():
                 self.calDAV.vobject_instance.vevent.add('description')
-            self.calDAV.vobject_instance.vevent.description.value = src_event.description
+            self.calDAV.vobject_instance.vevent.description.value = src_event.sanitize_description()
         
         if src_event.location == None:
             self.calDAV.icalendar_component['location'] = src_event.source.default_location
@@ -273,7 +290,7 @@ class ILSCEvent(object):
             self.calDAV.save()
         return self
     
-    def set_title_icons(self):
+    def set_title_icons(self, sep = ' | '):
         try:
             icons = set(self.categories).intersection(set(self.source.icons))
             
@@ -281,7 +298,7 @@ class ILSCEvent(object):
                 icon_str = ""
                 for i in icons:
                     icon_str += self.source.icons[i]
-                _new_title = icalendar.vText(f"{icon_str} | {self.title}")
+                _new_title = icalendar.vText(f"{icon_str}{sep}{self.title}")
                 self.calDAV.icalendar_component['summary'] = _new_title
                 logger.success(f"Event icons set for {self.date} | {self.safe_title}")
                 return True
@@ -295,7 +312,7 @@ class ILSCEvent(object):
         try:
             if self.title.startswith("?"):# or self.title.endswith("?"):
                 self.calDAV.icalendar_component['status'] = 'TENTATIVE'
-                self.calDAV.icalendar_component['summary'] = icalendar.vText(self.calDAV.icalendar_component['summary'].lstrip("?"))
+                self.calDAV.icalendar_component['summary'] = icalendar.vText(self.calDAV.icalendar_component['summary'].lstrip("?").strip())
                 logger.success(f"Set correct visibility for {self.date} | {self.safe_title}")
                 return True
         except Exception as ex:
@@ -326,7 +343,7 @@ class ILSCEvent(object):
 class CalendarHandler(object):
     
     def __init__(self):
-        self.last_check = TimeZone.localize(datetime.now())      
+        self.last_check = TimeZone.localize(datetime.now() + timedelta(days = -7))
         
         self.cal_primary = None
         self.cal_name = None
@@ -582,9 +599,9 @@ class AppFactory:
                 logger.debug(f'Ignoring {new_event.status} event: {new_event.date} | {new_event.safe_title}')
                 #skip planned events
                 continue
+            
             try: 
                 _cal = Calendar()
-                #vevent = new_event.create_ical_event().to_ical()
                 vevent = new_event.create_ical_event()
                 
                 _cal.add_component(vevent)
