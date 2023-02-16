@@ -10,14 +10,17 @@
 			"force_time" : true,
 			"force_start" : "21:00",
 			"force_end" : "23:59",
-			"ignore_planned" : false,
-			"ignore_descriptions": true,
+			"ignore_planned" : true,
+			"ignore_descriptions": false,
 			"title_prefix" : "BD CLUB",
 			"tags" : ["BD","ILSC"],
 			"color" : "lightskyblue",
 			"default_location" : "BD CLUB",
-			"sanitize_stati" : true,
-			"iconize" : true
+			"sanitize" : {
+				"stati" : true,
+				"source_icons" : true,
+				"target_icons" : true
+			}
 		},
 		{
 			"cal_primary" : "https://example.com/remote.php/dav",
@@ -29,14 +32,17 @@
 			"force_time" : true,
 			"force_start" : "21:00",
 			"force_end" : "23:59",
-			"ignore_planned" : false,
-			"ignore_descriptions": true,
-			"title_prefix" : "bi-Club",
-			"tags" : ["bi","ILSC"],
+			"ignore_planned" : true,
+			"ignore_descriptions": false,
+			"title_prefix" : "BD CLUB",
+			"tags" : ["BD","ILSC"],
 			"color" : "lightskyblue",
-			"default_location" : "bi-Club",
-			"sanitize_stati" : true,
-			"iconize" : true
+			"default_location" : "BD CLUB",
+			"sanitize" : {
+				"stati" : true,
+				"source_icons" : true,
+				"target_icons" : true
+			}
 		},
 	],
 	"target" : {

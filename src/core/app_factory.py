@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from hashlib import md5
 from icalendar import Calendar, Event as icalEvent, vDDDTypes as icalDate, vText
 from icalendar.prop import vCategory
+from string import Template
 
 from __main__ import appConfig
 
@@ -91,6 +92,9 @@ class ILSCEvent(object):
     
     @property
     def prefixed_title(self) -> str:
+        if self.source.title_prefix and self.source.sanitize_icons_tgt: 
+            _pre = Template(appConfig.get('calendars','prefix_format')).substitute(icons = self.icons, prefix = self.source.title_prefix).strip()
+            return f"{_pre} | {self.title}"
         if self.source.title_prefix:
             return f"{self.source.title_prefix} | {self.title}"
         else:
@@ -105,7 +109,14 @@ class ILSCEvent(object):
             "CANCELLED"           ;Indicates event is canceled
             returns True if satus is TENTATIVE
         '''
-        return True if self.ical.get('status') == "TENTATIVE" else False
+        return True if ( self.ical.get('status') == "TENTATIVE" ) or ( self._is_planned_from_title ) else False
+    
+    @property
+    def _is_planned_from_title(self) -> bool:
+        '''
+        true if title starts with ?
+        '''
+        return self.title.startswith("?")
     
     @property
     def is_canceled(self) -> bool:
@@ -224,7 +235,7 @@ class ILSCEvent(object):
         
         return icalendar.vText(_desc)
     
-    def create_ical_event(self, iconize = False) -> icalEvent:
+    def create_ical_event(self) -> icalEvent:
         new_event=icalEvent()
         _now = TimeZone.localize(datetime.now())
 
@@ -292,21 +303,24 @@ class ILSCEvent(object):
     
     def set_title_icons(self, sep = ' | '):
         try:
-            icons = set(self.categories).intersection(set(self.source.icons))
-            
-            if icons:
-                icon_str = ""
-                for i in icons:
-                    icon_str += self.source.icons[i]
-                _new_title = icalendar.vText(f"{icon_str}{sep}{self.title}")
+            if self.icons:
+                _new_title = icalendar.vText(f"{self.icons}{sep}{self.title}")
                 self.calDAV.icalendar_component['summary'] = _new_title
                 logger.success(f"Event icons set for {self.date} | {self.safe_title}")
                 return True
             #return False
         except Exception as ex:
             logger.error(f"Could not set event icons for {self.date} | {self.safe_title} - {ex}")
-        
         return False
+    
+    @property
+    def icons(self) -> str:
+        icons = set(self.categories).intersection(set(self.source.icons))
+        icon_str = ""
+        if icons:
+            for i in icons:
+                icon_str += self.source.icons[i]
+        return icon_str
     
     def update_state_by_title(self):
         try:
@@ -343,7 +357,7 @@ class ILSCEvent(object):
 class CalendarHandler(object):
     
     def __init__(self):
-        self.last_check = TimeZone.localize(datetime.now() + timedelta(days = -7))
+        self.last_check = TimeZone.localize(datetime.now() - timedelta(days = 7))
         
         self.cal_primary = None
         self.cal_name = None
@@ -363,8 +377,11 @@ class CalendarHandler(object):
         self.color = None
         self.default_location = None
         
-        self.sanitize_stati = False
-        self.iconize = False
+        self.sanitize = {
+                "stati" : True,
+                "source_icons" : True,
+                "target_icons" : True
+        }
         
         self.events_data = {}
         
@@ -372,10 +389,26 @@ class CalendarHandler(object):
         self.calendar = None
         self.principal = None
         self.icons = {}
-        
+    
+    @property
+    def sanitize_stati(self) -> bool:
+        return self.sanitize["stati"]
+    
+    @property
+    def sanitize_icons_src(self) -> bool:
+        return self.sanitize["source_icons"]
+
+    @property
+    def sanitize_icons_tgt(self) -> bool:
+        return self.sanitize["target_icons"]
+
     def config(self, conf_data):
         for key, val in conf_data.items():
-            setattr(self, key, val) 
+            if type(val) == dict:
+                #setattr(self, key, getattr(self, key) | val)
+                setattr(self, key, {**getattr(self, key), **val})
+            else:
+                setattr(self, key, val) 
     
     def read(self):
         '''read events from caldav calendar'''
@@ -492,16 +525,17 @@ class AppFactory:
             
     def sanitize_events(self):
         for c in self.calendars:
-            if c.sanitize_stati or c.iconize:
+            if c.sanitize_stati or c.sanitize_icons_src:
                 for _, e in c.events_data.items():
                     if e.last_modified.astimezone(pytz.utc) > c.last_check.astimezone(pytz.utc):
                         save = False
                         if c.sanitize_stati:
                             save = bool(save + e.update_state_by_title())
-                        if c.iconize: 
+                        if c.sanitize_icons_src: 
                             save = bool(save + e.set_title_icons())
                         if save:
                             e.save()
+                            logger.info(f"Updated source event: {e.date} | {e.safe_title}")
     
     def init_schedulers(self):
         #self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)

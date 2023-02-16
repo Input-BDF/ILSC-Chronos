@@ -11,6 +11,7 @@ path = ./config
 filename = calendars.json
 range_min = 0
 range_max = 365
+prefix_format = $icons $prefix
 delete_on_target = True
 
 [log]

@@ -234,6 +234,7 @@ class Config(object):
                 ConfigValue('range_min', int, default=0),
                 ConfigValue('range_max', int, default=365),
                 ConfigValue('delete_on_target', bool, default=True),
+                ConfigValue('prefix_format', default='$icons $prefix'),
             )
         
         # Section [log]
