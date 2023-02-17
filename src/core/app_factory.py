@@ -86,6 +86,10 @@ class ILSCEvent(object):
         return self.ical.get('X-ILSC-ORIGIN')
     
     @property
+    def cal_id(self) -> str:
+        return self.ical.get('X-ILSC-CALID')
+    
+    @property
     def source_uid(self) -> str:
         '''returns None if not set'''
         return self.ical.get('X-ILSC-UID')
@@ -206,7 +210,9 @@ class ILSCEvent(object):
         Assumes that someone or thing added prefixes
         '''
         #TODO: collect all possible prefixes and match against them
-        return re.sub(r"^([^\|]*\|)", "", title.to_ical().decode(), count=0, flags=0).strip()
+        if title:
+            return re.sub(r"^([^\|]*\|)", "", title.to_ical().decode(), count=0, flags=0).strip()
+        return 'N/A'
     
     def _parse_categories(self, event: icalEvent) -> list:
         _cats = event.get('categories')
@@ -262,6 +268,7 @@ class ILSCEvent(object):
         #TODO: Check existence after updating with HIDs (works on rainlendar, android phone [google calendar, jorte] 
         new_event.add('X-ILSC-ORIGIN', APP_ID)
         new_event.add('X-ILSC-CREATED', str(_now))
+        new_event.add('X-ILSC-CALID', self.source.chronos_id)
         new_event.add('X-ILSC-UID', self.key)
             
         return new_event
@@ -391,6 +398,10 @@ class CalendarHandler(object):
         self.icons = {}
     
     @property
+    def chronos_id(self) -> str:
+        return md5(f'{self.cal_name}_{self.cal_primary}'.encode('utf-8')).hexdigest()
+    
+    @property
     def sanitize_stati(self) -> bool:
         return self.sanitize["stati"]
     
@@ -484,6 +495,14 @@ class CalendarHandler(object):
                 found[key] = event
         return found
 
+    def search_events_by_calid(self, calid:str) -> dict:
+        '''search read events created by chronos with given calendar id'''
+        found = {}
+        for key, event in self.events_data.items():
+            if calid == event.cal_id and event.is_chronos_origin:
+                found[key] = event
+        return found
+
 class AppFactory:
     def __init__(self, config: appConfig):
         self.config = config
@@ -535,7 +554,7 @@ class AppFactory:
                             save = bool(save + e.set_title_icons())
                         if save:
                             e.save()
-                            logger.info(f"Updated source event: {e.date} | {e.safe_title}")
+                            logger.debug(f"Updated source event: {e.date} | {e.safe_title}")
     
     def init_schedulers(self):
         #self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)
@@ -583,7 +602,8 @@ class AppFactory:
         '''Update target calendar events'''
         
         source_cal = calendar.events_data
-        target_cal = self.target.search_events_by_tags(calendar.tags)
+        #target_cal = self.target.search_events_by_tags(calendar.tags)
+        target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         changeSet = set(target_cal).intersection(set(source_cal))
         changed = {}
         
@@ -602,7 +622,8 @@ class AppFactory:
     def _delete_target_events(self, calendar: CalendarHandler) -> dict:
         '''delete target iCal events not in source calendar'''
         source_cal = calendar.events_data
-        target_cal = self.target.search_events_by_tags(calendar.tags)
+        #target_cal = self.target.search_events_by_tags(calendar.tags)
+        target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         deleteSet = set(target_cal).difference(set(source_cal))
         deleted = {}
         
@@ -620,7 +641,8 @@ class AppFactory:
     def _create_target_events(self, calendar: CalendarHandler) -> dict:
         '''create iCal events only in source calendar'''
         source_cal = calendar.events_data
-        target_cal = self.target.search_events_by_tags(calendar.tags)
+        #target_cal = self.target.search_events_by_tags(calendar.tags)
+        target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
         new_events = {}
 
