@@ -439,7 +439,9 @@ class CalendarHandler(object):
         for calendar in self.available_calendars():
             if calendar and calendar.name == self.cal_name:
                 self.calendar = calendar
-                start_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days = RANGE_MIN)
+                #TODO: Check if timezone or utc converion is needed
+                #had to add 2 hours else duplicates are created
+                start_date = datetime.today().replace(hour=2, minute=0, second=0, microsecond=0) + timedelta(days = RANGE_MIN)
                 end_date = start_date + timedelta(days=RANGE_MAX)
                 
                 logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {start_date} to {end_date}')
