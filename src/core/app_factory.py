@@ -231,15 +231,15 @@ class ILSCEvent(object):
             _desc = self.description.to_ical()
         #Remove multiline comments
         _reg_group = r"(###.*(?:###\\n|###))"
-        _desc = re.sub(_reg_group,'', _desc)
+        nocmt = re.sub(_reg_group,'', _desc)
         #Remove single line Comments
-        _reg_line = r"#[^\\]*(?:\\[\s\S][^\\n]*)*\\n"
-        _desc = re.sub(_reg_line,'', _desc)
+        _reg_line = r"#[^\\]*(?:\\[\s\S][^\\n]*)*(?:\\n|$)"
+        nocmt = re.sub(_reg_line,'', nocmt)
         #Remove triple newlines
         _reg_double = r"(\\n\\n\\n)"
-        _desc = re.sub(_reg_double,'', _desc)
+        nocmt = re.sub(_reg_double,'', nocmt)
         
-        return icalendar.vText(_desc)
+        return icalendar.vText(nocmt)
     
     def create_ical_event(self) -> icalEvent:
         new_event=icalEvent()
