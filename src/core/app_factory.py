@@ -13,6 +13,7 @@ import uuid
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
+import datetime as dt
 from hashlib import md5
 from icalendar import Calendar, Event as icalEvent, vDDDTypes as icalDate, vText
 from icalendar.prop import vCategory
@@ -32,6 +33,14 @@ RANGE_MIN = appConfig.get('calendars', 'range_min')
 RANGE_MAX = appConfig.get('calendars', 'range_max')
 WIPE_ON_TARGET = appConfig.get('calendars', 'delete_on_target')
 
+def set_tz(date_time, time_zone):
+    '''
+    convert to given timezone
+    '''
+    if isinstance(date_time, datetime):
+        return pytz.timezone(time_zone).normalize(date_time)
+    return date_time
+
 class ILSCEvent(object):
     
     def __init__(self, source):
@@ -40,6 +49,8 @@ class ILSCEvent(object):
         self.uid = uuid.uuid1()
         self.created = datetime.now()
         self.date = None
+        self.dt_start = None
+        self.dt_end = None
         self.description = None
         self.categories = []
         self.location = None
@@ -48,6 +59,11 @@ class ILSCEvent(object):
     
     def __repr__(self):
         return f"ILSCEvent - {self.date} | {self.title}"
+    
+    @property
+    def has_title(self):
+        'check if event has an empty title '
+        return self.title != 'N/A'
     
     @property
     def title(self):
@@ -105,6 +121,26 @@ class ILSCEvent(object):
             return self.title 
     
     @property
+    def is_all_day(self):
+        '''
+        check if event is set as allday event - no time given
+        (assuption till now)
+        '''
+        return not( isinstance(self.dt_end, dt.datetime) and isinstance(self.dt_start, dt.datetime) )
+    
+    @property
+    def duration(self):
+        '''
+        return event duration
+        '''
+        return self.dt_end - self.dt_start 
+    
+    @property
+    def is_multiday(self):
+        'check if event is multiday (more than 24h) event. 1-allday == 24h'
+        return self.duration > timedelta(hours = 24)
+    
+    @property
     def is_planned(self) -> bool:
         '''
         checks for ical status
@@ -142,42 +178,31 @@ class ILSCEvent(object):
     def status(self):
         return self.ical.get('status')
     
-    @property
-    def date_start(self):
-        #Allday:
-        if self.source.all_day:
-            return self.date
-        #Timed:
-        if self.source.force_time:
+    def _make_date(self, idate, force_time):
+        #allday:
+        if self.is_all_day and self.is_multiday:
+            return idate
+        #affects only 24h allday events
+        if self.is_all_day and not(self.is_multiday) and self.source.force_time:
             try:
-                _start_time = datetime.strptime(self.source.force_start, '%H:%M').time()
-                return TimeZone.localize(datetime.combine(self.date, _start_time))
+                _time = datetime.strptime(force_time, '%H:%M').time()
+                return TimeZone.localize(datetime.combine(self.dt_start, _time))
             except ValueError as ve:
                 raise ValueError(f'Incompatible time format given. Check %H:%M - {ve}')
             except Exception as ex:
                 logger.critical(f'Can not read calendars forced time configuration - {ex}')
                 raise
         #Pass original date
-        return self.ical.get('dtstart').dt
+        return idate
+    
+    @property
+    def date_start(self):
+        return self._make_date(self.dt_start, self.source.force_start)
     
     @property
     def date_end(self):
-        #Allday:
-        if self.source.all_day:
-            return self.date + timedelta(days=1)
-        #Timed:
-        if self.source.force_time:
-            try:
-                _end_time = datetime.strptime(self.source.force_end, '%H:%M').time()
-                return TimeZone.localize(datetime.combine(self.date, _end_time))
-            except ValueError as ve:
-                raise ValueError(f'Incompatible time format given. Check %H:%M - {ve}')
-            except Exception as ex:
-                logger.critical(f'Can not read calendars forced time configuration - {ex}')
-                raise
-        #Pass original date
-        return self.ical.get('dtend').dt
-
+        return self._make_date(self.dt_end, self.source.force_end)
+    
     @property
     def md5_string(self):
         return f'{self.date}_{self.safe_title}_{self.description}'.encode('utf-8')
@@ -197,6 +222,9 @@ class ILSCEvent(object):
         #TODO: enshure uid exists (at least it should )
         self.uid = str(event_object.get('uid'))
         self.created = event_object.get('dtstamp').dt
+        self.dt_start = set_tz(event_object.get('dtstart').dt, self.source.time_zone)
+        self.dt_end = set_tz(event_object.get('dtend').dt, self.source.time_zone)
+
         self.date = event_object.get('dtstart').dt
         if isinstance(self.date, datetime):
             self.date = self.date.date()
@@ -366,14 +394,19 @@ class CalendarHandler(object):
     def __init__(self):
         self.last_check = TimeZone.localize(datetime.now() - timedelta(days = 7))
         
+        self.events_data = {}
+        
+        self.client = None
+        self.calendar = None
+        self.principal = None
+        
+        #derived from calendars.json
         self.cal_primary = None
         self.cal_name = None
         self.cal_user = None
         self.cal_passwd = None
         
-        self.all_day = True
-        self.time_zone = "Europe/Berlin"
-        self.force_time = False
+        self.force_time = False #affects only 24h allday events
         self.force_start = None
         self.force_end = None
 
@@ -390,11 +423,6 @@ class CalendarHandler(object):
                 "target_icons" : True
         }
         
-        self.events_data = {}
-        
-        self.client = None
-        self.calendar = None
-        self.principal = None
         self.icons = {}
     
     @property
@@ -478,10 +506,14 @@ class CalendarHandler(object):
         components = cal.walk('vevent')
         for component in components:
             if component.name == "VEVENT":
+                '''
+                #only needed if parsing all events in calendar
+                #TODO: check what this was for ^^
                 edate = component.get('dtstart').dt
                 if isinstance(edate, datetime):
                     edate = edate.date()
-                #if edate >= date.start_date(): #only needed if parsing all events in calendar
+                #if edate >= date.start_date():
+                ''' 
                 event = ILSCEvent(self)
                 event.calDAV = calEvent
                 event.populate_from_vcal_object(component)
@@ -650,6 +682,9 @@ class AppFactory:
 
         for eUID in newSet:
             new_event = source_cal[eUID]
+            if not(new_event.has_title):
+                logger.debug(f'Ignoring event without title: {new_event.date}')
+                continue
             if new_event.is_confidential:
                 logger.debug(f'Ignoring confidential event: {new_event.date}')
                 continue
