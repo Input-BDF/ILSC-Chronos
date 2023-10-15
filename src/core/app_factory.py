@@ -7,7 +7,7 @@ Created on 25.02.2022
 import caldav
 import json
 import pytz
-import re
+import regex
 import time
 import uuid
 
@@ -71,7 +71,7 @@ class ILSCEvent(object):
     
     @property
     def safe_title(self):
-        return re.sub(r'[^\x00-\x7F]+','', self.title)
+        return regex.sub(r'[^\x00-\x7F]+','', self.title)
     
     @property
     def ical(self) -> caldav.Event:
@@ -239,7 +239,7 @@ class ILSCEvent(object):
         '''
         #TODO: collect all possible prefixes and match against them
         if title:
-            return re.sub(r"^([^\|]*\|)", "", title.to_ical().decode(), count=0, flags=0).strip()
+            return regex.sub(r"^([^\|]*\|)", "", title.to_ical().decode(), count=0, flags=0).strip()
         return 'N/A'
     
     def _parse_categories(self, event: icalEvent) -> list:
@@ -252,21 +252,32 @@ class ILSCEvent(object):
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
     
+    def _rem_multline_comments(self, text:str) -> str:
+        '''Remove multiline comments'''
+        _reg = r"(?:^\s*#{3}|(?<=\\n)\s*#{3})(?:\\n)?[^#]{3}.*?(?:#{3}\\n|#{3}$)"
+        nocmt = regex.sub(_reg,'', text)
+        return nocmt
+    
+    def _rem_singline_comments(self, text:str) -> str:
+        '''Remove single-line comments'''
+        _reg = r"((?:^\s*#|(?<=\\n)\s*#).*?(?:[^\\]\\n|$))"
+        nocmt = regex.sub(_reg,'', text)
+        return nocmt
+
+    def _strip_newlines(self, text:str) -> str:
+        '''reduce multiple newlines to max 2 remove strip leading/trailing newlines'''
+        _reg = r"(^(?:\s*\\n){1,}|(?<=(?:\s*\\n){2})(?:\s*\\n)*)|((?:\s*\\n)*$)"
+        nocmt = regex.sub(_reg,'', text)
+        return nocmt
+    
     def sanitize_description(self) -> vText:
         try:
             _desc = self.description.to_ical().decode('utf-8')
         except:
             _desc = self.description.to_ical()
-        #Remove multiline comments
-        _reg_group = r"(###.*(?:###\\n|###))"
-        nocmt = re.sub(_reg_group,'', _desc)
-        #Remove single line Comments
-        _reg_line = r"#[^\\]*(?:\\[\s\S][^\\n]*)*(?:\\n|$)"
-        nocmt = re.sub(_reg_line,'', nocmt)
-        #Remove triple newlines
-        _reg_double = r"(\\n\\n\\n)"
-        nocmt = re.sub(_reg_double,'', nocmt)
-        
+        nocmt = self._rem_multline_comments(_desc)
+        nocmt = self._rem_singline_comments(nocmt)
+        nocmt = self._strip_newlines(nocmt)
         return icalendar.vText(nocmt)
     
     def create_ical_event(self) -> icalEvent:
