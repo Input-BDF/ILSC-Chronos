@@ -132,3 +132,4 @@ dmypy.json
 /.project
 /src/config/app.cfg
 /src/config/calendars.json
+/src/logs/*.log_debug

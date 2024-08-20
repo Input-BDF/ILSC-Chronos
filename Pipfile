@@ -8,6 +8,7 @@ icalendar = "==4.0.9"
 caldav = ">=1.0.1"
 apscheduler = "==3.9.0.post1"
 colorama = "==0.4.4"
+regex = "*"
 
 [dev-packages]
 netifaces = "*"
