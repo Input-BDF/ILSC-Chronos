@@ -220,18 +220,25 @@ class ILSCEvent(object):
 
     def populate_from_vcal_object(self, event_object: caldav.Event):
         #TODO: enshure uid exists (at least it should )
-        self.uid = str(event_object.get('uid'))
-        self.created = event_object.get('dtstamp').dt
-        self.dt_start = set_tz(event_object.get('dtstart').dt, self.source.time_zone)
-        self.dt_end = set_tz(event_object.get('dtend').dt, self.source.time_zone)
+        try:
+            self.uid = str(event_object.get('uid'))
+            if self.is_confidential:
+                logger.warning(f"Skipping further ical parsing on confidential event: {self.uid} | Source: {self.source.cal_name}")
+                return
+            self.created = event_object.get('dtstamp').dt
+            self.dt_start = set_tz(event_object.get('dtstart').dt, self.source.time_zone)
+            self.dt_end = set_tz(event_object.get('dtend').dt, self.source.time_zone)
 
-        self.date = event_object.get('dtstart').dt
-        if isinstance(self.date, datetime):
-            self.date = self.date.date()
-        self.description = event_object.get('description')
-        self.location = event_object.get('location')
-        self.categories = self._parse_categories(event_object)
-    
+            self.date = event_object.get('dtstart').dt
+            if isinstance(self.date, datetime):
+                self.date = self.date.date()
+            self.description = event_object.get('description')
+            self.location = event_object.get('location')
+            self.categories = self._parse_categories(event_object)
+        except Exception as ex:
+            logger.error(f"Could not process Event UID: {self.uid} | Source: {self.source.cal_name} | Reason: - {ex}")
+            raise ex
+
     def _clear_title(self, title: vText) -> str:
         '''
         Search for first occurance of any Prefix and replace
@@ -524,11 +531,13 @@ class CalendarHandler(object):
                 if isinstance(edate, datetime):
                     edate = edate.date()
                 #if edate >= date.start_date():
-                ''' 
+                '''
                 event = ILSCEvent(self)
                 event.calDAV = calEvent
-                event.populate_from_vcal_object(component)
-                self.events_data[event.key] = event
+                #Only handle public events
+                if not event.is_confidential:
+                    event.populate_from_vcal_object(component)
+                    self.events_data[event.key] = event
     
     def search_events_by_tags(self, tags:list) -> dict:
         '''search read events created by chronos with given tags
