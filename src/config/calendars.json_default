@@ -13,6 +13,11 @@
 			"ignore_descriptions": false,
 			"title_prefix" : "BD CLUB",
 			"tags" : ["BD","ILSC"],
+			"tags_excluded": [
+				"Intern",
+				"Ignore",
+				"Nutzung"
+			],
 			"color" : "lightskyblue",
 			"default_location" : "BD CLUB",
 			"sanitize" : {
@@ -34,6 +39,11 @@
 			"ignore_descriptions": false,
 			"title_prefix" : "BD CLUB",
 			"tags" : ["BD","ILSC"],
+			"tags_excluded": [
+				"Intern",
+				"Ignore",
+				"Nutzung"
+			],
 			"color" : "lightskyblue",
 			"default_location" : "BD CLUB",
 			"sanitize" : {
