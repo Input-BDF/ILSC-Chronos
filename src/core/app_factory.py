@@ -220,6 +220,18 @@ class ILSCEvent(object):
         return self._make_date(self.dt_end, self.source.force_end)
     
     @property
+    def date_out_of_range(self) -> bool:
+        try:
+            target = self._get_ical_start_date()
+            today = dt.date.today()
+            delta = (target - today).days
+            out_of_range = delta > ( RANGE_MAX - 1 )  # Reduce by two days to bypass assumed day drift in Calendar selection
+            return out_of_range 
+        except Exception as ex:
+            logger.critical(f'Could not determine day distance')
+        return True
+    
+    @property
     def md5_string(self):
         return f'{self.date}_{self.safe_title}_{self.description}'.encode('utf-8')
     
@@ -244,15 +256,20 @@ class ILSCEvent(object):
             self.created = self.ical.get('dtstamp').dt
             self.dt_start = set_tz(self.ical.get('dtstart').dt, self.source.time_zone)
             self.dt_end = set_tz(self.ical.get('dtend').dt, self.source.time_zone)
-
-            self.date = self.ical.get('dtstart').dt
-            if isinstance(self.date, datetime):
-                self.date = self.date.date()
+            
+            self.date = self._get_ical_start_date()
+            
             self.description = self.ical.get('description')
             self.location = self.ical.get('location')
         except Exception as ex:
             logger.error(f"Could not process Event UID: {self.uid} | Source: {self.source.cal_name} | Reason: - {ex}")
             raise ex
+
+    def _get_ical_start_date(self):
+        _date = self.ical.get('dtstart').dt
+        if isinstance(_date, datetime):
+            return _date.date()
+        return _date
 
     def _clear_title(self, title: vText) -> str:
         '''
@@ -548,7 +565,7 @@ class CalendarHandler(object):
                 event = ILSCEvent(self)
                 event.calDAV = calEvent
                 #Only handle public events and those not conataining exclude tags
-                if not event.is_confidential and not event.is_excluded:
+                if not event.is_confidential and not event.is_excluded and not event.date_out_of_range:
                     event.populate_from_vcal_object()
                     self.events_data[event.key] = event
     
