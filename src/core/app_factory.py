@@ -4,25 +4,28 @@ Created on 25.02.2022
 
 @author: input
 '''
-import caldav
+
+# python lib
+from datetime import datetime, timedelta
+from hashlib import md5
+from string import Template
+import datetime as dt
 import json
-import pytz
 import regex
 import time
 import uuid
 
+# external libs
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
-import datetime as dt
-from hashlib import md5
 from icalendar import Calendar, Event as icalEvent, vDDDTypes as icalDate, vText
 from icalendar.prop import vCategory
-from string import Template
-
-from __main__ import appConfig
-
-from core.log_factory import get_app_logger
+import caldav
 import icalendar
+import pytz
+
+# own code
+from __main__ import appConfig
+from core.log_factory import get_app_logger
 
 logger = get_app_logger()
 
