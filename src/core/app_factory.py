@@ -44,20 +44,21 @@ def set_tz(date_time, time_zone):
         return pytz.timezone(time_zone).normalize(date_time)
     return date_time
 
-class ILSCEvent(object):
+class ILSCEvent:
     
     def __init__(self, source):
         self.source = source
         
         self.uid = uuid.uuid1()
-        self.created = datetime.now()
-        self.date = None
-        self.dt_start = None
-        self.dt_end = None
+        self.created: dt.datetime = datetime.now()
+        self.date: dt.datetime = None
+        self.dt_start: dt.datetime = None
+        self.dt_end: dt.datetime = None
         self.description = None
         self.location = None
         
-        self.calDAV = None
+        self.calDAV: caldav.Event = None
+        self.icalendar_component: icalendar.Event = None
     
     def __repr__(self):
         return f"ILSCEvent - {self.date} | {self.title}"
