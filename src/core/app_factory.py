@@ -732,7 +732,7 @@ class AppFactory:
         #target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
-        new_events = {}
+        new_events: dict[vText, ILSCEvent] = {}
 
         for eUID in newSet:
             new_event = source_cal[eUID]
