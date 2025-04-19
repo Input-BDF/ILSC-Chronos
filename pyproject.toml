@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Chronos"
+version = "0.1.0"
+dependencies = [
+    "icalendar==4.0.9",
+    "caldav>=1.0.1",
+    "apscheduler==3.10.4",
+    "colorama==0.4.6",
+    "regex",
+]
+requires-python = "~=3.11"
+description = "calendar event transmission service"
+readme = "readme.md"
+license = { file = "LICENSE" }
+keywords = ["calendar", "synchronization"]
