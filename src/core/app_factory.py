@@ -59,8 +59,8 @@ class ILSCEvent:
         self.description = None
         self.location = None
         
-        self.calDAV: caldav.Event = None
-        self.icalendar_component: icalendar.Event = None
+        self.calDAV: caldav.Event | None = None
+        self.icalendar_component: icalendar.Event | None = None
     
     def __repr__(self):
         return f"ILSCEvent - {self.date} | {self.title}"
