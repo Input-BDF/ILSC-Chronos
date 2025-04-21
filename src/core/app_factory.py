@@ -52,7 +52,7 @@ class ILSCEvent:
         
         self.uid = uuid.uuid1()
         self.created: dt.datetime = dt.datetime.now()
-        self.date: dt.datetime = None
+        self.date: dt.date = None
         self.dt_start: dt.datetime = None
         self.dt_end: dt.datetime = None
         self.description: str = None
@@ -544,10 +544,22 @@ class CalendarHandler:
 
             new_event = ILSCEvent(self)
             new_event.description = event.get("DESCRIPTION")
-            tmp_dt_start: icalDate = event.get("DTSTART")
-            new_event.dt_start =  tmp_dt_start.dt
-            tmp_dt_end: icalDate = event.get("DTEND")
-            new_event.dt_end = tmp_dt_end.dt
+
+            # handle DTSTART
+            tmp_dt_start: icalDate = event.get("DTSTART")        
+            if isinstance(tmp_dt_start.dt, dt.datetime):
+                new_event.dt_start =  tmp_dt_start.dt
+            elif isinstance(tmp_dt_start.dt, dt.date):
+                new_event.dt_start = dt.datetime(tmp_dt_start.dt.year, tmp_dt_start.dt.month, tmp_dt_start.dt.day)
+
+            # handle DTEND
+            tmp_dt_end: icalDate = event.get("DTEND")            
+            if isinstance(tmp_dt_end.dt, dt.datetime):
+                new_event.dt_end =  tmp_dt_end.dt
+            elif isinstance(tmp_dt_end.dt, dt.date):
+                new_event.dt_end = dt.datetime(tmp_dt_end.dt.year, tmp_dt_end.dt.month, tmp_dt_end.dt.day)
+
+            new_event.date = new_event.dt_start.date()
 
             # problem bei diesem ansatz ist, dass ILSCEvent.calDAV nicht gesetzt wird
             # und dann für self.sync_calendars fehlt...
