@@ -4,25 +4,28 @@ Created on 25.02.2022
 
 @author: input
 '''
-import caldav
+
+# python lib
+from datetime import datetime, timedelta
+from hashlib import md5
+from string import Template
+import datetime as dt
 import json
-import pytz
 import regex
 import time
 import uuid
 
+# external libs
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
-import datetime as dt
-from hashlib import md5
 from icalendar import Calendar, Event as icalEvent, vDDDTypes as icalDate, vText
 from icalendar.prop import vCategory
-from string import Template
-
-from __main__ import appConfig
-
-from core.log_factory import get_app_logger
+import caldav
 import icalendar
+import pytz
+
+# own code
+from __main__ import appConfig
+from core.log_factory import get_app_logger
 
 logger = get_app_logger()
 
@@ -41,20 +44,21 @@ def set_tz(date_time, time_zone):
         return pytz.timezone(time_zone).normalize(date_time)
     return date_time
 
-class ILSCEvent(object):
+class ILSCEvent:
     
     def __init__(self, source):
         self.source = source
         
         self.uid = uuid.uuid1()
-        self.created = datetime.now()
-        self.date = None
-        self.dt_start = None
-        self.dt_end = None
+        self.created: dt.datetime = datetime.now()
+        self.date: dt.datetime = None
+        self.dt_start: dt.datetime = None
+        self.dt_end: dt.datetime = None
         self.description = None
         self.location = None
         
-        self.calDAV = None
+        self.calDAV: caldav.Event = None
+        self.icalendar_component: icalendar.Event = None
     
     def __repr__(self):
         return f"ILSCEvent - {self.date} | {self.title}"
@@ -597,7 +601,7 @@ class AppFactory:
         
         self.active = False
     
-    def create(self):
+    def create(self) -> None:
         
         _td, _cd, _icons = self.read_cal_config()
         
@@ -605,12 +609,12 @@ class AppFactory:
         
         logger.debug('Base elements created')
     
-    def read_cal_config(self):
+    def read_cal_config(self) -> tuple[dict, dict, dict]:
         with open(self.config.get('calendars', 'file'), 'r', encoding='utf-8') as f:
             _data = json.load(f)
         return _data['target'], _data['calendars'], _data['icons']
         
-    def set_calendars(self, target_data : list, calendars_data : dict, icons : dict):
+    def set_calendars(self, target_data : list, calendars_data : dict, icons : dict) -> None:
         target_data['icons'] = icons
         self.target = CalendarHandler()
         self.target.config(target_data)
@@ -621,12 +625,12 @@ class AppFactory:
             _calendar.config(cal)
             self.calendars.append(_calendar)
     
-    def read_calendars(self):
+    def read_calendars(self) -> None:
         self.target.read()
         for c in self.calendars:
             c.read()
             
-    def sanitize_events(self):
+    def sanitize_events(self) -> None:
         for c in self.calendars:
             if c.sanitize_stati or c.sanitize_icons_src:
                 for _, e in c.events_data.items():
@@ -640,23 +644,23 @@ class AppFactory:
                             e.save()
                             logger.debug(f"Updated source event: {e.date} | {e.safe_title}")
     
-    def init_schedulers(self):
+    def init_schedulers(self) -> None:
         #self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)
         self.scheduler.add_job(self.cron_app, 'cron', id="smallfish", hour=f'*/{self.config.get("app","appcron")}', minute=0)
         self.scheduler.add_job(self.cron_app, 'cron', id="catfish", minute=f'{self.config.get("app","datacron")}')
         self.scheduler.start()
     
-    def run(self):
+    def run(self) -> None:
         self.active = True
         self.cron_app()
         while (self.active):
             time.sleep(60)
             #continue
     
-    def stop(self):
+    def stop(self) -> None:
         self.active = False
     
-    def cron_app(self):
+    def cron_app(self) -> None:
         try:
             self.read_calendars()
             logger.debug('Done parsing source calendars')
@@ -667,13 +671,13 @@ class AppFactory:
         except Exception as ex:
             logger.critical(f'Cron excecution failed. Reason {ex}')
     
-    def sync_calendars(self):
+    def sync_calendars(self) -> None:
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
             c.last_check = TimeZone.localize(datetime.now())
             logger.success(f'Done comparing with "{c.cal_name}". {len(changed)} entries updated. {len(new)} entries added. {len(deleted)} entries deleted.')
     
-    def sync_calendar(self, calendar: CalendarHandler) -> (dict, dict, dict):
+    def sync_calendar(self, calendar: CalendarHandler) -> tuple[dict, dict, dict]:
         #Update target calendar events from source calendar
         changed = self._update_target_events(calendar)
         #delete iCal event not in source calendar
@@ -728,7 +732,7 @@ class AppFactory:
         #target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
-        new_events = {}
+        new_events: dict[vText, ILSCEvent] = {}
 
         for eUID in newSet:
             new_event = source_cal[eUID]

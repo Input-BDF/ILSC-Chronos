@@ -301,8 +301,11 @@ class Config(object):
                 v.apply_default()
     
     def _configure_file_paths(self):
-        self.calendars.update('file', self.get('calendars', 'path').joinpath(self.get('calendars', 'filename')))
-        self.log.update('file', self.get('log', 'path').joinpath(self.get('log','filename')))
+        calendar_filename = self.get('calendars', 'path').joinpath(self.get('calendars', 'filename'))
+        self.calendars.update('file', calendar_filename)
+
+        log_filename = self.get('log', 'path').joinpath(self.get('log','filename'))
+        self.log.update('file', log_filename)
     
     def _read_commandline_config(self):
         if self.appCL.config:
