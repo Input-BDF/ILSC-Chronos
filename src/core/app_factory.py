@@ -547,7 +547,7 @@ class CalendarHandler:
             # ich hab an manchen stellen von ILSCEvent noch sanity-checks dafür eingebaut,
             # frag mich aber ob das überhaupt der richtige ansatz ist.
             
-            # new_event.icalendar_component = event.copy()
+            new_event.icalendar_component = event.copy()
 
             self.events_data[event_summary] = new_event
 
