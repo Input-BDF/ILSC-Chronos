@@ -263,13 +263,14 @@ class ILSCEvent:
             return self.source_uid.encode('utf-8')
         return f'{self.uid}'.encode('utf-8')
 
-    def populate_from_vcal_object(self):
-        #TODO: enshure uid exists (at least it should )
+    def populate_from_vcal_object(self) -> None:
+        #TODO: ensure UID exists (at least it should )
         try:
             self.uid = str(self.ical.get('uid'))
             if self.is_confidential or self.is_excluded:
                 logger.info(f"Skipping further ical parsing on confidential or excluded event: {self.uid} | Source: {self.source.cal_name}")
                 return
+            
             self.created = self.ical.get('dtstamp').dt
             self.dt_start = set_tz(self.ical.get('dtstart').dt, self.source.time_zone)
             self.dt_end = set_tz(self.ical.get('dtend').dt, self.source.time_zone)
