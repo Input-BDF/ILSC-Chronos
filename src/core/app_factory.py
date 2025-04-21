@@ -192,7 +192,10 @@ class ILSCEvent:
     
     @property
     def is_confidential(self) -> bool:
-        confidential = False if ( not self.ical.get('class') ) or self.ical.get('class') == "PUBLIC" else True 
+        class_content = self.ical.get('class')
+        # "CLASS" entry being not set means that it is "PUBLIC" (as it is the default value)
+        is_public = class_content is None or class_content == "PUBLIC"
+        confidential = not is_public
         return confidential
     
     @property
