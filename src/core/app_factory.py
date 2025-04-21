@@ -8,7 +8,9 @@ Created on 25.02.2022
 # python lib
 from datetime import datetime, timedelta
 from hashlib import md5
+from pathlib import Path
 from string import Template
+from urllib.request import urlretrieve
 import datetime as dt
 import json
 import regex
