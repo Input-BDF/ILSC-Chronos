@@ -145,9 +145,10 @@ class ILSCEvent:
     def is_all_day(self):
         '''
         check if event is set as allday event - no time given
-        (assuption till now)
+        (assumption till now)
         '''
-        return not( isinstance(self.dt_end, dt.datetime) and isinstance(self.dt_start, dt.datetime) )
+        result = not( isinstance(self.dt_end, dt.datetime) and isinstance(self.dt_start, dt.datetime) )
+        return result
     
     @property
     def duration(self):
@@ -209,7 +210,7 @@ class ILSCEvent:
     def status(self):
         return self.ical.get('status')
     
-    def _make_date(self, idate, force_time):
+    def _make_date(self, idate: icalDate, force_time: str):
         #allday:
         if self.is_all_day and self.is_multiday:
             return idate
@@ -228,11 +229,13 @@ class ILSCEvent:
     
     @property
     def date_start(self):
-        return self._make_date(self.dt_start, self.source.force_start)
+        result = self._make_date(self.dt_start, self.source.force_start)
+        return result
     
     @property
     def date_end(self):
-        return self._make_date(self.dt_end, self.source.force_end)
+        result = self._make_date(self.dt_end, self.source.force_end)
+        return result
     
     @property
     def date_out_of_range(self) -> bool:
