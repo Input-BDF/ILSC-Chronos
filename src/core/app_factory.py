@@ -498,7 +498,16 @@ class CalendarHandler:
                 #setattr(self, key, getattr(self, key) | val)
                 setattr(self, key, {**getattr(self, key), **val})
             else:
-                setattr(self, key, val) 
+                setattr(self, key, val)
+
+    
+    def read(self) -> None:
+        ''' read calendar events. decides if it is from a ICS file or from a CalDAV calendar. '''
+
+        if ".ics" in self.cal_primary:
+            self.read_ics_from_url()
+        else:
+            self.read_from_cal_dav()
     
     def read_ics_from_url(self):
         ''' read events form .ics file from a calendars primary adress '''
@@ -537,7 +546,7 @@ class CalendarHandler:
             self.events_data[event_summary] = new_event
 
 
-    def read(self) -> None:
+    def read_from_cal_dav(self) -> None:
         '''read events from caldav calendar'''
         logger.debug(f'Connecting Calendar "{self.cal_name}"')
         start = time.time()
