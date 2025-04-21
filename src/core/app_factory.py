@@ -500,7 +500,44 @@ class CalendarHandler:
             else:
                 setattr(self, key, val) 
     
-    def read(self):
+    def read_ics_from_url(self):
+        ''' read events form .ics file from a calendars primary adress '''
+
+        # can't open ICS file directly, so first download
+        pathname_tmp = Path("./tmp")
+        pathname_tmp.mkdir(parents=True, exist_ok=True)
+        fn_cal = pathname_tmp / f"tmp_{self.cal_name}.ics"
+        urlretrieve(self.cal_primary, fn_cal)
+
+        # TODO 2025-04-21 handle ICS file not being accessible
+
+        with fn_cal.open(encoding="utf-8") as f:
+            calendar_contents = f.read()
+            ics_calendar = icalendar.Calendar.from_ical(calendar_contents)
+
+        if str(ics_calendar["X-WR-CALNAME"]) != self.cal_name:
+            return
+        
+        for event in ics_calendar.walk("VEVENT"):
+            event_summary = str(event.get("SUMMARY"))
+            print(f"{event_summary=}")
+
+            new_event = ILSCEvent(self)
+            new_event.description = event.get("DESCRIPTION")
+            new_event.dt_start = event.get("DTSTART")
+            new_event.dt_end = event.get("DTEND")
+
+            # problem bei diesem ansatz ist, dass ILSCEvent.calDAV nicht gesetzt wird
+            # und dann für self.sync_calendars fehlt...
+            # ich hab an manchen stellen von ILSCEvent noch sanity-checks dafür eingebaut,
+            # frag mich aber ob das überhaupt der richtige ansatz ist.
+            
+            # new_event.icalendar_component = event.copy()
+
+            self.events_data[event_summary] = new_event
+
+
+    def read(self) -> None:
         '''read events from caldav calendar'''
         logger.debug(f'Connecting Calendar "{self.cal_name}"')
         start = time.time()
