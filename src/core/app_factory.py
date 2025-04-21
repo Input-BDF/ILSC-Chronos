@@ -38,7 +38,7 @@ RANGE_MIN = appConfig.get('calendars', 'range_min')
 RANGE_MAX = appConfig.get('calendars', 'range_max')
 WIPE_ON_TARGET = appConfig.get('calendars', 'delete_on_target')
 
-def set_tz(date_time, time_zone):
+def set_tz(date_time: datetime, time_zone: str):
     '''
     convert to given timezone
     '''
