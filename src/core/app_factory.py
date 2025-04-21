@@ -436,7 +436,7 @@ class ILSCEvent:
             logger.debug(f'{other.md5}')
             return False
 
-class CalendarHandler(object):
+class CalendarHandler:
     
     def __init__(self):
         self.last_check = TimeZone.localize(datetime.now() - timedelta(days = 7))

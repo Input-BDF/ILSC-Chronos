@@ -68,7 +68,7 @@ class ConfigSection():
     def delete(self, key):
         del self.params[key]
 
-class ConfigValue(object):
+class ConfigValue:
     '''
     Unsupported/ Untested:
         Numeric Types:   range
@@ -136,7 +136,7 @@ class ConfigValue(object):
         else:
             raise TypeError(f'Value has wrong type: {type(_val)} Required: {self._datatype}')
 
-class ConfigPath(object):
+class ConfigPath:
     def __init__(self, name, value=None, default=None, exists=False, create=False):
         self._path = None
         self._default = default
@@ -195,7 +195,7 @@ class ConfigPath(object):
         if self.val == None:
             self.val = deepcopy(self._default)
 
-class Config(object):
+class Config:
     '''
     app configuration class
     '''
