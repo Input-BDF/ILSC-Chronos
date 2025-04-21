@@ -344,14 +344,18 @@ class ILSCEvent:
         
         if self.source.ignore_descriptions == False and self.description:
             new_event.add('description', self.sanitize_description())
+
         if self.location == None:
             new_event.add('location', self.source.default_location)
         else:
             new_event.add('location', self.location)
+
         new_event.add('categories', self.combine_categories(self.source.tags))
         new_event.add('status', self.status)
+        
         if self.source.color:
             new_event.add('color', self.source.color)
+
         ####
         #CUSTOM PROPERTIES
         #TODO: Check existence after updating with HIDs (works on rainlendar, android phone [google calendar, jorte] 
