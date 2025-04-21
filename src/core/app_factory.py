@@ -545,8 +545,10 @@ class CalendarHandler:
 
             new_event = ILSCEvent(self)
             new_event.description = event.get("DESCRIPTION")
-            new_event.dt_start = event.get("DTSTART")
-            new_event.dt_end = event.get("DTEND")
+            tmp_dt_start: icalDate = event.get("DTSTART")
+            new_event.dt_start =  tmp_dt_start.dt
+            tmp_dt_end: icalDate = event.get("DTEND")
+            new_event.dt_end = tmp_dt_end.dt
 
             # problem bei diesem ansatz ist, dass ILSCEvent.calDAV nicht gesetzt wird
             # und dann für self.sync_calendars fehlt...
