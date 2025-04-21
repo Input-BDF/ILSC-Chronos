@@ -6,7 +6,6 @@ Created on 25.02.2022
 '''
 
 # python lib
-from datetime import datetime, timedelta
 from hashlib import md5
 from pathlib import Path
 from string import Template
@@ -38,11 +37,11 @@ RANGE_MIN = appConfig.get('calendars', 'range_min')
 RANGE_MAX = appConfig.get('calendars', 'range_max')
 WIPE_ON_TARGET = appConfig.get('calendars', 'delete_on_target')
 
-def set_tz(date_time: datetime, time_zone: str):
+def set_tz(date_time: dt.datetime, time_zone: str):
     '''
     convert to given timezone
     '''
-    if isinstance(date_time, datetime):
+    if isinstance(date_time, dt.datetime):
         return pytz.timezone(time_zone).normalize(date_time)
     return date_time
 
@@ -52,7 +51,7 @@ class ILSCEvent:
         self.source: "CalendarHandler" = source
         
         self.uid = uuid.uuid1()
-        self.created: dt.datetime = datetime.now()
+        self.created: dt.datetime = dt.datetime.now()
         self.date: dt.datetime = None
         self.dt_start: dt.datetime = None
         self.dt_end: dt.datetime = None
@@ -102,7 +101,7 @@ class ILSCEvent:
         return True if _mod else False  
     
     @property
-    def last_modified(self) -> datetime:
+    def last_modified(self) -> dt.datetime:
         '''return last modification date. if event never was modified the creation date is provided'''
         _mod = self.ical.get('last-modified')
         return _mod.dt if _mod else self.ical.get('dtstamp').dt
@@ -160,7 +159,7 @@ class ILSCEvent:
     @property
     def is_multiday(self):
         'check if event is multiday (more than 24h) event. 1-allday == 24h'
-        return self.duration > timedelta(hours = 24)
+        return self.duration > dt.timedelta(hours = 24)
     
     @property
     def is_planned(self) -> bool:
@@ -217,8 +216,8 @@ class ILSCEvent:
         #affects only 24h allday events
         if self.is_all_day and not(self.is_multiday) and self.source.force_time:
             try:
-                _time = datetime.strptime(force_time, '%H:%M').time()
-                return TimeZone.localize(datetime.combine(self.dt_start, _time))
+                _time = dt.datetime.strptime(force_time, '%H:%M').time()
+                return TimeZone.localize(dt.datetime.combine(self.dt_start, _time))
             except ValueError as ve:
                 raise ValueError(f'Incompatible time format given. Check %H:%M - {ve}')
             except Exception as ex:
@@ -285,7 +284,7 @@ class ILSCEvent:
 
     def _get_ical_start_date(self):
         _date = self.ical.get('dtstart').dt
-        if isinstance(_date, datetime):
+        if isinstance(_date, dt.datetime):
             return _date.date()
         return _date
 
@@ -332,7 +331,7 @@ class ILSCEvent:
     
     def create_ical_event(self) -> icalEvent:
         new_event=icalEvent()
-        _now = TimeZone.localize(datetime.now())
+        _now = TimeZone.localize(dt.datetime.now())
 
         #set random uuid to support getting arround nextcloud deleting problem
         new_event.add('uid', uuid.uuid1())
@@ -386,7 +385,7 @@ class ILSCEvent:
         self.calDAV.icalendar_component['dtstart'] = icalDate(src_event.date_start)
         self.calDAV.icalendar_component['dtend'] = icalDate(src_event.date_end)
         #add/update last modified parameter cause nextcloud does not
-        self.calDAV.icalendar_component['last-modified'] = icalDate(datetime.now())
+        self.calDAV.icalendar_component['last-modified'] = icalDate(dt.datetime.now())
         
         self.calDAV.icalendar_component['status'] = src_event.status
         if ( src_event.source.ignore_planned and src_event.is_planned ) or src_event.is_confidential or src_event.is_excluded:
@@ -453,7 +452,7 @@ class ILSCEvent:
 class CalendarHandler:
     
     def __init__(self):
-        self.last_check = TimeZone.localize(datetime.now() - timedelta(days = 7))
+        self.last_check = TimeZone.localize(dt.datetime.now() - dt.timedelta(days = 7))
         
         self.events_data = {}
         
@@ -580,8 +579,8 @@ class CalendarHandler:
                 self.calendar = calendar
                 #TODO: Check if timezone or utc converion is needed
                 #had to add 2 hours else duplicates are created
-                start_date = datetime.today().replace(hour=2, minute=0, second=0, microsecond=0) + timedelta(days = RANGE_MIN)
-                end_date = start_date + timedelta(days=RANGE_MAX)
+                start_date = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0) + dt.timedelta(days = RANGE_MIN)
+                end_date = start_date + dt.timedelta(days=RANGE_MAX)
                 
                 logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {start_date} to {end_date}')
                 
@@ -738,7 +737,7 @@ class AppFactory:
     def sync_calendars(self) -> None:
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
-            c.last_check = TimeZone.localize(datetime.now())
+            c.last_check = TimeZone.localize(dt.datetime.now())
             logger.success(f'Done comparing with "{c.cal_name}". {len(changed)} entries updated. {len(new)} entries added. {len(deleted)} entries deleted.')
     
     def sync_calendar(self, calendar: CalendarHandler) -> tuple[dict, dict, dict]:
