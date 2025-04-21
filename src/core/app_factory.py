@@ -80,7 +80,13 @@ class ILSCEvent:
     
     @property
     def ical(self) -> caldav.Event:
-        return self.calDAV.icalendar_component if self.calDAV else None
+        if self.calDAV is not None:
+            return self.calDAV.icalendar_component
+        if self.icalendar_component is not None:
+            return self.icalendar_component
+        message = "neither self.calDAV.icalendar_component (for calendars from CalDAV input)"
+        message += " nor self._icalendar_event (for calendars from ICS file input) is given"
+        raise ValueError(message)
     
     @property
     def is_chronos_origin(self) -> bool:
