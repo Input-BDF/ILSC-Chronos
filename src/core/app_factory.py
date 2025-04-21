@@ -48,15 +48,15 @@ def set_tz(date_time: datetime, time_zone: str):
 
 class ILSCEvent:
     
-    def __init__(self, source):
-        self.source = source
+    def __init__(self, source: "CalendarHandler"):
+        self.source: "CalendarHandler" = source
         
         self.uid = uuid.uuid1()
         self.created: dt.datetime = datetime.now()
         self.date: dt.datetime = None
         self.dt_start: dt.datetime = None
         self.dt_end: dt.datetime = None
-        self.description = None
+        self.description: str = None
         self.location = None
         
         self.calDAV: caldav.Event | None = None
