@@ -56,7 +56,7 @@ class ILSCEvent:
         self.dt_start: dt.datetime = None
         self.dt_end: dt.datetime = None
         self.description: str = None
-        self.location = None
+        self.location: str = None
         
         self.calDAV: caldav.Event | None = None
         self._ics_event: icalendar.Event | None = None
