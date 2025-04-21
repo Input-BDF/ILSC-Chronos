@@ -60,7 +60,7 @@ class ILSCEvent:
         self.location = None
         
         self.calDAV: caldav.Event | None = None
-        self.icalendar_component: icalendar.Event | None = None
+        self._ics_event: icalendar.Event | None = None
     
     def __repr__(self):
         return f"ILSCEvent - {self.date} | {self.title}"
@@ -82,10 +82,10 @@ class ILSCEvent:
     def ical(self) -> caldav.Event:
         if self.calDAV is not None:
             return self.calDAV.icalendar_component
-        if self.icalendar_component is not None:
-            return self.icalendar_component
+        if self._ics_event is not None:
+            return self._ics_event
         message = "neither self.calDAV.icalendar_component (for calendars from CalDAV input)"
-        message += " nor self._icalendar_event (for calendars from ICS file input) is given"
+        message += " nor self._ics_event (for calendars from ICS file input) is given"
         raise ValueError(message)
     
     @property
@@ -547,7 +547,7 @@ class CalendarHandler:
             # ich hab an manchen stellen von ILSCEvent noch sanity-checks dafür eingebaut,
             # frag mich aber ob das überhaupt der richtige ansatz ist.
             
-            new_event.icalendar_component = event.copy()
+            new_event._ics_event = event.copy()
 
             self.events_data[event_summary] = new_event
 
