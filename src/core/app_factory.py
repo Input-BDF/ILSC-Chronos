@@ -454,7 +454,7 @@ class CalendarHandler:
     def __init__(self):
         self.last_check = TimeZone.localize(dt.datetime.now() - dt.timedelta(days = 7))
         
-        self.events_data = {}
+        self.events_data: dict[str, ILSCEvent] = {}
         
         self.client = None
         self.calendar = None
@@ -603,7 +603,7 @@ class CalendarHandler:
         #dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
 
-    def available_calendars(self):
+    def available_calendars(self) -> list[caldav.Calendar]:
         cals = self.principal.calendars()
         logger.info(f'Fetching available calendars on: {self.cal_name}')
         logger.debug('Found:')
@@ -611,7 +611,7 @@ class CalendarHandler:
             logger.debug(f'\t{cal.name}')
         return cals
     
-    def read_event(self, calEvent: caldav.Event):
+    def read_event(self, calEvent: caldav.Event) -> None:
         '''read event data'''
         #TODO: Clean this mess. As there should only be one vevent component. at least if caldav filter is working
         cal = Calendar.from_ical(calEvent.data)
@@ -644,7 +644,7 @@ class CalendarHandler:
                 found[key] = event
         return found
 
-    def search_events_by_calid(self, calid:str) -> dict:
+    def search_events_by_calid(self, calid:str) -> dict[str, ILSCEvent]:
         '''search read events created by chronos with given calendar id'''
         found = {}
         for key, event in self.events_data.items():
