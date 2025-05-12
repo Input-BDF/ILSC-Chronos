@@ -213,6 +213,7 @@ class ILSCEvent:
         #allday:
         if self.is_all_day and self.is_multiday:
             return idate
+
         #affects only 24h allday events
         if self.is_all_day and not(self.is_multiday) and self.source.force_time:
             try:
@@ -223,6 +224,7 @@ class ILSCEvent:
             except Exception as ex:
                 logger.critical(f'Can not read calendars forced time configuration - {ex}')
                 raise
+
         #Pass original date
         return idate
     
@@ -494,7 +496,8 @@ class CalendarHandler:
     
     @property
     def chronos_id(self) -> str:
-        return md5(f'{self.cal_name}_{self.cal_primary}'.encode('utf-8')).hexdigest()
+        result = md5(f'{self.cal_name}_{self.cal_primary}'.encode('utf-8')).hexdigest()
+        return result
     
     @property
     def sanitize_stati(self) -> bool:
@@ -547,33 +550,33 @@ class CalendarHandler:
             event_summary = str(event.get("SUMMARY"))
             print(f"{event_summary=}")
 
-            new_event = ILSCEvent(self)
-            new_event.description = event.get("DESCRIPTION")
+            new_ilsc_event = ILSCEvent(self)
+            new_ilsc_event.description = event.get("DESCRIPTION")
 
             # handle DTSTART
             tmp_dt_start: icalDate = event.get("DTSTART")        
             if isinstance(tmp_dt_start.dt, dt.datetime):
-                new_event.dt_start =  tmp_dt_start.dt
+                new_ilsc_event.dt_start =  tmp_dt_start.dt
             elif isinstance(tmp_dt_start.dt, dt.date):
-                new_event.dt_start = dt.datetime(tmp_dt_start.dt.year, tmp_dt_start.dt.month, tmp_dt_start.dt.day)
+                new_ilsc_event.dt_start = dt.datetime(tmp_dt_start.dt.year, tmp_dt_start.dt.month, tmp_dt_start.dt.day)
 
             # handle DTEND
             tmp_dt_end: icalDate = event.get("DTEND")            
             if isinstance(tmp_dt_end.dt, dt.datetime):
-                new_event.dt_end =  tmp_dt_end.dt
+                new_ilsc_event.dt_end =  tmp_dt_end.dt
             elif isinstance(tmp_dt_end.dt, dt.date):
-                new_event.dt_end = dt.datetime(tmp_dt_end.dt.year, tmp_dt_end.dt.month, tmp_dt_end.dt.day)
+                new_ilsc_event.dt_end = dt.datetime(tmp_dt_end.dt.year, tmp_dt_end.dt.month, tmp_dt_end.dt.day)
 
-            new_event.date = new_event.dt_start.date()
+            new_ilsc_event.date = new_ilsc_event.dt_start.date()
 
             # problem bei diesem ansatz ist, dass ILSCEvent.calDAV nicht gesetzt wird
             # und dann für self.sync_calendars fehlt...
             # ich hab an manchen stellen von ILSCEvent noch sanity-checks dafür eingebaut,
             # frag mich aber ob das überhaupt der richtige ansatz ist.
             
-            new_event._ics_event = event.copy()
+            new_ilsc_event._ics_event = event.copy()
 
-            self.events_data[event_summary] = new_event
+            self.events_data[event_summary] = new_ilsc_event
 
 
     def read_from_cal_dav(self) -> None:
@@ -644,12 +647,13 @@ class CalendarHandler:
                     edate = edate.date()
                 #if edate >= date.start_date():
                 '''
-                event = ILSCEvent(self)
-                event.calDAV = calEvent
+                ilsc_event = ILSCEvent(self)
+                ilsc_event.calDAV = calEvent
+                
                 #Only handle public events and those not conataining exclude tags
-                if not event.is_confidential and not event.is_excluded and not event.date_out_of_range:
-                    event.populate_from_vcal_object()
-                    self.events_data[event.key] = event
+                if not ilsc_event.is_confidential and not ilsc_event.is_excluded and not ilsc_event.date_out_of_range:
+                    ilsc_event.populate_from_vcal_object()
+                    self.events_data[ilsc_event.key] = ilsc_event
     
     def search_events_by_tags(self, tags:list) -> dict:
         '''search read events created by chronos with given tags
