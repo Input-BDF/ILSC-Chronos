@@ -551,32 +551,39 @@ class CalendarHandler:
             print(f"{event_summary=}")
 
             new_ilsc_event = ILSCEvent(self)
-            new_ilsc_event.description = event.get("DESCRIPTION")
+            new_ilsc_event._ics_event = event.copy()            
+                
+            #Only handle public events and those not conataining exclude tags
+            if not new_ilsc_event.is_confidential and not new_ilsc_event.is_excluded and not new_ilsc_event.date_out_of_range:
+                new_ilsc_event.populate_from_vcal_object()
+                self.events_data[new_ilsc_event.key] = new_ilsc_event
 
-            # handle DTSTART
-            tmp_dt_start: icalDate = event.get("DTSTART")        
-            if isinstance(tmp_dt_start.dt, dt.datetime):
-                new_ilsc_event.dt_start =  tmp_dt_start.dt
-            elif isinstance(tmp_dt_start.dt, dt.date):
-                new_ilsc_event.dt_start = dt.datetime(tmp_dt_start.dt.year, tmp_dt_start.dt.month, tmp_dt_start.dt.day)
+            # new_ilsc_event.description = event.get("DESCRIPTION")
 
-            # handle DTEND
-            tmp_dt_end: icalDate = event.get("DTEND")            
-            if isinstance(tmp_dt_end.dt, dt.datetime):
-                new_ilsc_event.dt_end =  tmp_dt_end.dt
-            elif isinstance(tmp_dt_end.dt, dt.date):
-                new_ilsc_event.dt_end = dt.datetime(tmp_dt_end.dt.year, tmp_dt_end.dt.month, tmp_dt_end.dt.day)
+            # # handle DTSTART
+            # tmp_dt_start: icalDate = event.get("DTSTART")        
+            # if isinstance(tmp_dt_start.dt, dt.datetime):
+            #     new_ilsc_event.dt_start =  tmp_dt_start.dt
+            # elif isinstance(tmp_dt_start.dt, dt.date):
+            #     new_ilsc_event.dt_start = dt.datetime(tmp_dt_start.dt.year, tmp_dt_start.dt.month, tmp_dt_start.dt.day)
 
-            new_ilsc_event.date = new_ilsc_event.dt_start.date()
+            # # handle DTEND
+            # tmp_dt_end: icalDate = event.get("DTEND")            
+            # if isinstance(tmp_dt_end.dt, dt.datetime):
+            #     new_ilsc_event.dt_end =  tmp_dt_end.dt
+            # elif isinstance(tmp_dt_end.dt, dt.date):
+            #     new_ilsc_event.dt_end = dt.datetime(tmp_dt_end.dt.year, tmp_dt_end.dt.month, tmp_dt_end.dt.day)
 
-            # problem bei diesem ansatz ist, dass ILSCEvent.calDAV nicht gesetzt wird
-            # und dann für self.sync_calendars fehlt...
-            # ich hab an manchen stellen von ILSCEvent noch sanity-checks dafür eingebaut,
-            # frag mich aber ob das überhaupt der richtige ansatz ist.
+            # new_ilsc_event.date = new_ilsc_event.dt_start.date()
+
+            # # problem bei diesem ansatz ist, dass ILSCEvent.calDAV nicht gesetzt wird
+            # # und dann für self.sync_calendars fehlt...
+            # # ich hab an manchen stellen von ILSCEvent noch sanity-checks dafür eingebaut,
+            # # frag mich aber ob das überhaupt der richtige ansatz ist.
             
-            new_ilsc_event._ics_event = event.copy()
+            # new_ilsc_event._ics_event = event.copy()
 
-            self.events_data[event_summary] = new_ilsc_event
+            # self.events_data[event_summary] = new_ilsc_event
 
 
     def read_from_cal_dav(self) -> None:
