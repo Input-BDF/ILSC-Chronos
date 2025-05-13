@@ -553,11 +553,36 @@ class CalendarHandler:
             print(f"{event_summary=}")
 
             new_ilsc_event = ILSCEvent(self)
-            new_ilsc_event._ics_event = event.copy()            
+            new_ilsc_event._ics_event = event.copy()
                 
             #Only handle public events and those not conataining exclude tags
             if not new_ilsc_event.is_confidential and not new_ilsc_event.is_excluded and not new_ilsc_event.date_out_of_range:
                 new_ilsc_event.populate_from_vcal_object()
+                
+                # determine limits of time range with timezone info
+                limit_start_date = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=TimeZone) + dt.timedelta(days = RANGE_MIN)
+                limit_end_date = limit_start_date + dt.timedelta(days=RANGE_MAX)
+
+                # handle different input types (dt.date or dt.datetime) with timezone info
+                if isinstance(new_ilsc_event.dt_start, dt.datetime):
+                    dt_start = new_ilsc_event.dt_start
+                else:
+                    dt_start = dt.datetime(year=new_ilsc_event.dt_start.year, month=new_ilsc_event.dt_start.month, day=new_ilsc_event.dt_start.day, tzinfo=TimeZone)
+
+                if isinstance(new_ilsc_event.dt_end, dt.datetime):
+                    dt_end = new_ilsc_event.dt_end
+                else:
+                    dt_end = dt.datetime(year=new_ilsc_event.dt_end.year, month=new_ilsc_event.dt_end.month, day=new_ilsc_event.dt_end.day, tzinfo=TimeZone)
+
+                # check for limits
+                if dt_start < limit_start_date:
+                    print("event is in the past")
+                    continue
+                
+                if dt_end > limit_end_date:
+                    print("event is in the far future")
+                    continue
+
                 self.events_data[new_ilsc_event.key] = new_ilsc_event
 
 
