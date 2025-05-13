@@ -546,6 +546,8 @@ class CalendarHandler:
         if str(ics_calendar["X-WR-CALNAME"]) != self.cal_name:
             return
         
+        self.events_data = {}
+        
         for event in ics_calendar.walk("VEVENT"):
             event_summary = str(event.get("SUMMARY"))
             print(f"{event_summary=}")
@@ -562,6 +564,7 @@ class CalendarHandler:
     def read_from_cal_dav(self) -> None:
         '''read events from caldav calendar'''
         logger.debug(f'Connecting Calendar "{self.cal_name}"')
+
         start = time.time()
         try:
             self.client = caldav.DAVClient(self.cal_primary, username=self.cal_user,
@@ -570,10 +573,13 @@ class CalendarHandler:
         except Exception as ex:
             logger.critical(f'Error on CALDav auth: {ex}')
             raise
+
         self.events_data = {}
+
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
         start = time.time()
-        logger.debug('Reading Events') 
+
+        logger.debug('Reading Events')
         for calendar in self.available_calendars():
             if calendar and calendar.name == self.cal_name:
                 self.calendar = calendar
