@@ -303,7 +303,7 @@ class ILSCEvent:
             logger.error(f"Could not process Event UID: {self.uid} | Source: {self.source.cal_name} | Reason: - {ex}")
             raise ex
 
-    def _get_ical_start_date(self):
+    def _get_ical_start_date(self) -> dt.date:
         _date = self.ical.get('dtstart').dt
         if isinstance(_date, dt.datetime):
             return _date.date()
@@ -709,7 +709,7 @@ class AppFactory:
         self.config = config
         self.scheduler = BackgroundScheduler({'apscheduler.timezone': self.config.get('app','timezone')})
         
-        self.calendars = []
+        self.calendars: list[CalendarHandler] = []
         self.target = None
         
         self.active = False
