@@ -578,7 +578,8 @@ class CalendarHandler:
                 new_ilsc_event.populate_from_vcal_object()
                 
                 # determine limits of time range with timezone info
-                limit_start_date = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=TimeZone) + dt.timedelta(days = RANGE_MIN)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=RANGE_MIN)
                 limit_end_date = limit_start_date + dt.timedelta(days=RANGE_MAX)
 
                 # handle different input types (dt.date or dt.datetime) with timezone info
