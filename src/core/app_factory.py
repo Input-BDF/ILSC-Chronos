@@ -287,9 +287,13 @@ class ILSCEvent:
                 logger.info(f"Skipping further ical parsing on confidential or excluded event: {self.uid} | Source: {self.source.cal_name}")
                 return
             
-            self.created = self.ical.get('dtstamp').dt
-            self.dt_start = set_tz(self.ical.get('dtstart').dt, self.source.time_zone)
-            self.dt_end = set_tz(self.ical.get('dtend').dt, self.source.time_zone)
+            raw_dtstamp = self.ical.get('dtstamp')
+            raw_dtstart = self.ical.get('dtstart')
+            raw_dtend = self.ical.get('dtend')
+
+            self.created = convert_to_date_or_utc_datetime(raw_dtstamp.dt)
+            self.dt_start = convert_to_date_or_utc_datetime(raw_dtstart.dt)
+            self.dt_end = convert_to_date_or_utc_datetime(raw_dtend.dt)
             
             self.date = self._get_ical_start_date()
             
