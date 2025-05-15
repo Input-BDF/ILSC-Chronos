@@ -37,13 +37,17 @@ RANGE_MIN = appConfig.get('calendars', 'range_min')
 RANGE_MAX = appConfig.get('calendars', 'range_max')
 WIPE_ON_TARGET = appConfig.get('calendars', 'delete_on_target')
 
-def set_tz(date_time: dt.datetime, time_zone: str):
+def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
     '''
     convert to given timezone
     '''
     if isinstance(date_time, dt.datetime):
-        return pytz.timezone(time_zone).normalize(date_time)
-    return date_time
+        result = pytz.timezone(time_zone).normalize(date_time)
+    elif isinstance(date_time, dt.date):
+        result = date_time
+    else:
+        raise ValueError(f"argument type ({type(date_time)}) not supported")
+    return result
 
 class ILSCEvent:
     
