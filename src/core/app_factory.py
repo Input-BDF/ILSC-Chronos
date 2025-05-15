@@ -628,18 +628,19 @@ class CalendarHandler:
                 self.calendar = calendar
                 #TODO: Check if timezone or utc converion is needed
                 #had to add 2 hours else duplicates are created
-                start_date = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0) + dt.timedelta(days = RANGE_MIN)
-                end_date = start_date + dt.timedelta(days=RANGE_MAX)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=RANGE_MIN)
+                limit_end_date = limit_start_date + dt.timedelta(days=RANGE_MAX)
                 
-                logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {start_date} to {end_date}')
+                logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
                 
                 try:
                     upcoming_events = calendar.date_search(
-                        start=start_date, end=end_date, compfilter="VEVENT", expand=True)
+                        start=limit_start_date, end=limit_end_date, compfilter="VEVENT", expand=True)
                 except:
                     #print("Your calendar server does apparently not support expanded search")
                     upcoming_events = calendar.date_search(
-                        start=start_date, end=end_date, expand=False)
+                        start=limit_start_date, end=limit_end_date, expand=False)
                 #get all events
                 #events = calendar.events()
                 for event in upcoming_events:
