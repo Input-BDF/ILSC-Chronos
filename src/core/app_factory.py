@@ -624,7 +624,8 @@ class CalendarHandler:
         start = time.time()
 
         logger.debug('Reading Events')
-        for calendar in self.available_calendars():
+        list_available_calendars = self.available_calendars()
+        for calendar in list_available_calendars:
             if calendar and calendar.name == self.cal_name:
                 self.calendar = calendar
                 #TODO: Check if timezone or utc converion is needed
@@ -653,6 +654,10 @@ class CalendarHandler:
         #uncomment as helper to check fetched events sorted by sektion and dates
         #dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
+
+        if self.calendar is None:
+            raise ValueError(f"read_from_cal_dav: target calendar '{self.cal_name}' was not found!")
+
 
     def available_calendars(self) -> list[caldav.Calendar]:
         cals = self.principal.calendars()
