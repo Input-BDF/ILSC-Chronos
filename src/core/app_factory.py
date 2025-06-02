@@ -37,13 +37,27 @@ RANGE_MIN = appConfig.get('calendars', 'range_min')
 RANGE_MAX = appConfig.get('calendars', 'range_max')
 WIPE_ON_TARGET = appConfig.get('calendars', 'delete_on_target')
 
-def set_tz(date_time: dt.datetime, time_zone: str):
+def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
     '''
     convert to given timezone
     '''
     if isinstance(date_time, dt.datetime):
-        return pytz.timezone(time_zone).normalize(date_time)
-    return date_time
+        result = pytz.timezone(time_zone).normalize(date_time)
+    elif isinstance(date_time, dt.date):
+        result = date_time
+    else:
+        raise ValueError(f"argument type ({type(date_time)}) not supported")
+    return result
+
+def convert_to_date_or_utc_datetime(date_or_datetime: dt.date | dt.datetime) -> dt.date | dt.datetime:
+    if isinstance(date_or_datetime, dt.datetime):
+        result = date_or_datetime.astimezone(dt.UTC)
+    elif isinstance(date_or_datetime, dt.date):
+        result = date_or_datetime
+    else:
+        raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
+    return result
+
 
 class ILSCEvent:
     
@@ -273,9 +287,13 @@ class ILSCEvent:
                 logger.info(f"Skipping further ical parsing on confidential or excluded event: {self.uid} | Source: {self.source.cal_name}")
                 return
             
-            self.created = self.ical.get('dtstamp').dt
-            self.dt_start = set_tz(self.ical.get('dtstart').dt, self.source.time_zone)
-            self.dt_end = set_tz(self.ical.get('dtend').dt, self.source.time_zone)
+            raw_dtstamp = self.ical.get('dtstamp')
+            raw_dtstart = self.ical.get('dtstart')
+            raw_dtend = self.ical.get('dtend')
+
+            self.created = convert_to_date_or_utc_datetime(raw_dtstamp.dt)
+            self.dt_start = convert_to_date_or_utc_datetime(raw_dtstart.dt)
+            self.dt_end = convert_to_date_or_utc_datetime(raw_dtend.dt)
             
             self.date = self._get_ical_start_date()
             
@@ -285,7 +303,7 @@ class ILSCEvent:
             logger.error(f"Could not process Event UID: {self.uid} | Source: {self.source.cal_name} | Reason: - {ex}")
             raise ex
 
-    def _get_ical_start_date(self):
+    def _get_ical_start_date(self) -> dt.date:
         _date = self.ical.get('dtstart').dt
         if isinstance(_date, dt.datetime):
             return _date.date()
@@ -553,11 +571,37 @@ class CalendarHandler:
             print(f"{event_summary=}")
 
             new_ilsc_event = ILSCEvent(self)
-            new_ilsc_event._ics_event = event.copy()            
+            new_ilsc_event._ics_event = event.copy()
                 
             #Only handle public events and those not conataining exclude tags
             if not new_ilsc_event.is_confidential and not new_ilsc_event.is_excluded and not new_ilsc_event.date_out_of_range:
                 new_ilsc_event.populate_from_vcal_object()
+                
+                # determine limits of time range with timezone info
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=RANGE_MIN)
+                limit_end_date = limit_start_date + dt.timedelta(days=RANGE_MAX)
+
+                # handle different input types (dt.date or dt.datetime) with timezone info
+                if isinstance(new_ilsc_event.dt_start, dt.datetime):
+                    dt_start = new_ilsc_event.dt_start
+                else:
+                    dt_start = dt.datetime(year=new_ilsc_event.dt_start.year, month=new_ilsc_event.dt_start.month, day=new_ilsc_event.dt_start.day, tzinfo=TimeZone)
+
+                if isinstance(new_ilsc_event.dt_end, dt.datetime):
+                    dt_end = new_ilsc_event.dt_end
+                else:
+                    dt_end = dt.datetime(year=new_ilsc_event.dt_end.year, month=new_ilsc_event.dt_end.month, day=new_ilsc_event.dt_end.day, tzinfo=TimeZone)
+
+                # check for limits
+                if dt_start < limit_start_date:
+                    print("event is in the past")
+                    continue
+                
+                if dt_end > limit_end_date:
+                    print("event is in the far future")
+                    continue
+
                 self.events_data[new_ilsc_event.key] = new_ilsc_event
 
 
@@ -580,23 +624,25 @@ class CalendarHandler:
         start = time.time()
 
         logger.debug('Reading Events')
-        for calendar in self.available_calendars():
+        list_available_calendars = self.available_calendars()
+        for calendar in list_available_calendars:
             if calendar and calendar.name == self.cal_name:
                 self.calendar = calendar
                 #TODO: Check if timezone or utc converion is needed
                 #had to add 2 hours else duplicates are created
-                start_date = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0) + dt.timedelta(days = RANGE_MIN)
-                end_date = start_date + dt.timedelta(days=RANGE_MAX)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=RANGE_MIN)
+                limit_end_date = limit_start_date + dt.timedelta(days=RANGE_MAX)
                 
-                logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {start_date} to {end_date}')
+                logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
                 
                 try:
                     upcoming_events = calendar.date_search(
-                        start=start_date, end=end_date, compfilter="VEVENT", expand=True)
+                        start=limit_start_date, end=limit_end_date, compfilter="VEVENT", expand=True)
                 except:
                     #print("Your calendar server does apparently not support expanded search")
                     upcoming_events = calendar.date_search(
-                        start=start_date, end=end_date, expand=False)
+                        start=limit_start_date, end=limit_end_date, expand=False)
                 #get all events
                 #events = calendar.events()
                 for event in upcoming_events:
@@ -608,6 +654,10 @@ class CalendarHandler:
         #uncomment as helper to check fetched events sorted by sektion and dates
         #dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
+
+        if self.calendar is None:
+            raise ValueError(f"read_from_cal_dav: target calendar '{self.cal_name}' was not found!")
+
 
     def available_calendars(self) -> list[caldav.Calendar]:
         cals = self.principal.calendars()
@@ -664,7 +714,7 @@ class AppFactory:
         self.config = config
         self.scheduler = BackgroundScheduler({'apscheduler.timezone': self.config.get('app','timezone')})
         
-        self.calendars = []
+        self.calendars: list[CalendarHandler] = []
         self.target = None
         
         self.active = False
