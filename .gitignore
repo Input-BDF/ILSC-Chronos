@@ -136,9 +136,9 @@ dmypy.json
 /src/config/calendars.json
 /src/logs/*.log_debug
 
-config/calendars.json
-config/app.cfg
-logs/*.log_debug
+config/
+logs/
+tmp/
 
 # TT
 .vscode/
