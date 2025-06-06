@@ -5,22 +5,25 @@ Created on 24.02.2022
 @author: input
 '''
 
+from logging import Logger
 from core import log_factory
 from core.config import Config
+from core.app_factory import AppFactory
+
 
 ###
 # Debug
-def enable_remote_debug():
+def enable_remote_debug(app_config: Config, logger: Logger):
     try:
         import netifaces as ni
         from os import path as ospath
         logger.debug('RemoteDebug: Initializing')
-        _remote_ip = appConfig.get('debug', 'remote_server')
-        _remote_wd = appConfig.get('debug', 'remote_workdir')
-        _int_part = appConfig.get('debug', 'remote_iface_nr')
+        _remote_ip = app_config.get('debug', 'remote_server')
+        _remote_wd = app_config.get('debug', 'remote_workdir')
+        _int_part = app_config.get('debug', 'remote_iface_nr')
         #In some cases interface has two adresses. 
         #refer https://pypi.org/project/netifaces/
-        _ifaces = ni.ifaddresses(appConfig.get('debug', 'remote_interface'))
+        _ifaces = ni.ifaddresses(app_config.get('debug', 'remote_interface'))
         _local_ip = _ifaces[ni.AF_INET][int(_int_part)]['addr']
         logger.debug(f'RemoteDebug: Running on {_local_ip}')
         _path = ospath.dirname(ospath.abspath(__file__)).replace('/','\\')
@@ -53,9 +56,8 @@ except Exception as ex:
     print(ex)
 
 if appConfig.get('debug', 'remote'):
-    enable_remote_debug()
+    enable_remote_debug(appConfig, logger)
 
-from core.app_factory import AppFactory
 
 logger.info('---- Initialized - going up ----')
 
