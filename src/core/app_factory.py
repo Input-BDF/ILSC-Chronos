@@ -25,17 +25,11 @@ import icalendar
 import pytz
 
 # own code
-from __main__ import appConfig
 from core.log_factory import get_app_logger
+from core.config import Config
 
 logger = get_app_logger()
 
-TimeZone = pytz.timezone(appConfig.get('app','timezone'))
-
-APP_ID = appConfig.get('app', 'app_id')
-RANGE_MIN = appConfig.get('calendars', 'range_min')
-RANGE_MAX = appConfig.get('calendars', 'range_max')
-WIPE_ON_TARGET = appConfig.get('calendars', 'delete_on_target')
 
 def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
     '''
@@ -104,7 +98,7 @@ class ILSCEvent:
     @property
     def is_chronos_origin(self) -> bool:
         ''' check if chronos was creator of this event '''
-        return self.origin == APP_ID
+        return self.origin == self.source.app_config.get('app', 'app_id')
     
     @property
     def remote_changed(self) -> bool:
@@ -138,7 +132,8 @@ class ILSCEvent:
     def prefixed_title(self) -> str:
         '''return title prefixed with string defined in calender config'''
         if self.source.title_prefix and self.source.sanitize_icons_tgt: 
-            _pre = Template(appConfig.get('calendars','prefix_format')).substitute(icons = self.icons, prefix = self.source.title_prefix).strip()
+            _prefix_format = self.source.app_config.get('calendars','prefix_format')
+            _pre = Template(_prefix_format).substitute(icons = self.icons, prefix = self.source.title_prefix).strip()
             return f"{_pre} | {self.title}"
         if self.source.title_prefix:
             return f"{self.source.title_prefix} | {self.title}"
@@ -232,7 +227,10 @@ class ILSCEvent:
         if self.is_all_day and not(self.is_multiday) and self.source.force_time:
             try:
                 _time = dt.datetime.strptime(force_time, '%H:%M').time()
-                return TimeZone.localize(dt.datetime.combine(self.dt_start, _time))
+                app_timezone = pytz.timezone(self.source.app_config.get('app','timezone'))
+                combined_datetime = dt.datetime.combine(self.dt_start, _time)
+                localized_combined_datetime = app_timezone.localize(combined_datetime)
+                return localized_combined_datetime
             except ValueError as ve:
                 raise ValueError(f'Incompatible time format given. Check %H:%M - {ve}')
             except Exception as ex:
@@ -258,7 +256,8 @@ class ILSCEvent:
             target = self._get_ical_start_date()
             today = dt.date.today()
             delta = (target - today).days
-            out_of_range = delta > ( RANGE_MAX - 1 )  # Reduce by two days to bypass assumed day drift in Calendar selection
+            range_max = self.source.app_config.get('calendars', 'range_max')
+            out_of_range = delta > ( range_max - 1 )  # Reduce by two days to bypass assumed day drift in Calendar selection
             return out_of_range 
         except Exception as ex:
             logger.critical(f'Could not determine day distance')
@@ -352,7 +351,9 @@ class ILSCEvent:
     
     def create_ical_event(self) -> icalEvent:
         new_event=icalEvent()
-        _now = TimeZone.localize(dt.datetime.now())
+
+        app_timezone = pytz.timezone(self.source.app_config.get('app','timezone'))
+        _now = app_timezone.localize(dt.datetime.now())
 
         #set random uuid to support getting arround nextcloud deleting problem
         new_event.add('uid', uuid.uuid1())
@@ -379,7 +380,7 @@ class ILSCEvent:
         ####
         #CUSTOM PROPERTIES
         #TODO: Check existence after updating with HIDs (works on rainlendar, android phone [google calendar, jorte] 
-        new_event.add('X-ILSC-ORIGIN', APP_ID)
+        new_event.add('X-ILSC-ORIGIN', self.source.app_config.get('app', 'app_id'))
         new_event.add('X-ILSC-CREATED', str(_now))
         new_event.add('X-ILSC-CALID', self.source.chronos_id)
         new_event.add('X-ILSC-UID', self.key)
@@ -476,8 +477,12 @@ class ILSCEvent:
 
 class CalendarHandler:
     
-    def __init__(self):
-        self.last_check = TimeZone.localize(dt.datetime.now() - dt.timedelta(days = 7))
+    def __init__(self, app_config: Config):
+        self.app_config = app_config
+        
+
+        app_timezone = pytz.timezone(self.app_config.get('app','timezone'))
+        self.last_check = app_timezone.localize(dt.datetime.now() - dt.timedelta(days = 7))
         
         self.events_data: dict[str, ILSCEvent] = {}
         
@@ -579,19 +584,22 @@ class CalendarHandler:
                 
                 # determine limits of time range with timezone info
                 today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
-                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=RANGE_MIN)
-                limit_end_date = limit_start_date + dt.timedelta(days=RANGE_MAX)
+                range_min = self.app_config.get('calendars', 'range_min')
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
+                range_max = self.app_config.get('calendars', 'range_max')
+                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
 
                 # handle different input types (dt.date or dt.datetime) with timezone info
+                app_timezone = pytz.timezone(self.app_config.get('app','timezone'))
                 if isinstance(new_ilsc_event.dt_start, dt.datetime):
                     dt_start = new_ilsc_event.dt_start
                 else:
-                    dt_start = dt.datetime(year=new_ilsc_event.dt_start.year, month=new_ilsc_event.dt_start.month, day=new_ilsc_event.dt_start.day, tzinfo=TimeZone)
+                    dt_start = dt.datetime(year=new_ilsc_event.dt_start.year, month=new_ilsc_event.dt_start.month, day=new_ilsc_event.dt_start.day, tzinfo=app_timezone)
 
                 if isinstance(new_ilsc_event.dt_end, dt.datetime):
                     dt_end = new_ilsc_event.dt_end
                 else:
-                    dt_end = dt.datetime(year=new_ilsc_event.dt_end.year, month=new_ilsc_event.dt_end.month, day=new_ilsc_event.dt_end.day, tzinfo=TimeZone)
+                    dt_end = dt.datetime(year=new_ilsc_event.dt_end.year, month=new_ilsc_event.dt_end.month, day=new_ilsc_event.dt_end.day, tzinfo=app_timezone)
 
                 # check for limits
                 if dt_start < limit_start_date:
@@ -631,8 +639,10 @@ class CalendarHandler:
                 #TODO: Check if timezone or utc converion is needed
                 #had to add 2 hours else duplicates are created
                 today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
-                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=RANGE_MIN)
-                limit_end_date = limit_start_date + dt.timedelta(days=RANGE_MAX)
+                range_min = self.app_config.get('calendars', 'range_min')
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
+                range_max = self.app_config.get('calendars', 'range_max')
+                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
                 
                 logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
                 
@@ -710,9 +720,9 @@ class CalendarHandler:
         return found
 
 class AppFactory:
-    def __init__(self, config: appConfig):
-        self.config = config
-        self.scheduler = BackgroundScheduler({'apscheduler.timezone': self.config.get('app','timezone')})
+    def __init__(self, app_config: Config):
+        self.app_config = app_config
+        self.scheduler = BackgroundScheduler({'apscheduler.timezone': self.app_config.get('app','timezone')})
         
         self.calendars: list[CalendarHandler] = []
         self.target = None
@@ -728,18 +738,18 @@ class AppFactory:
         logger.debug('Base elements created')
     
     def read_cal_config(self) -> tuple[dict, dict, dict]:
-        with open(self.config.get('calendars', 'file'), 'r', encoding='utf-8') as f:
+        with open(self.app_config.get('calendars', 'file'), 'r', encoding='utf-8') as f:
             _data = json.load(f)
         return _data['target'], _data['calendars'], _data['icons']
         
     def set_calendars(self, target_data : list, calendars_data : dict, icons : dict) -> None:
         target_data['icons'] = icons
-        self.target = CalendarHandler()
+        self.target = CalendarHandler(self.app_config)
         self.target.config(target_data)
         
         for cal in calendars_data:
             cal['icons'] = icons
-            _calendar = CalendarHandler()
+            _calendar = CalendarHandler(self.app_config)
             _calendar.config(cal)
             self.calendars.append(_calendar)
     
@@ -792,9 +802,10 @@ class AppFactory:
             logger.critical(f'Cron excecution failed. Reason {ex}')
     
     def sync_calendars(self) -> None:
+        app_timezone = pytz.timezone(self.app_config.get('app','timezone'))
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
-            c.last_check = TimeZone.localize(dt.datetime.now())
+            c.last_check = app_timezone.localize(dt.datetime.now())
             logger.success(f'Done comparing with "{c.cal_name}". {len(changed)} entries updated. {len(new)} entries added. {len(deleted)} entries deleted.')
     
     def sync_calendar(self, calendar: CalendarHandler) -> tuple[dict, dict, dict]:
@@ -829,6 +840,11 @@ class AppFactory:
     
     def _delete_target_events(self, calendar: CalendarHandler) -> dict:
         '''delete target iCal events not in source calendar'''
+
+        wipe_on_target = self.app_config.get('calendars', 'delete_on_target')
+        if not wipe_on_target:
+            return {}
+        
         source_cal = calendar.events_data
         #target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
@@ -837,7 +853,7 @@ class AppFactory:
         
         for eUID in deleteSet:
             try:
-                if WIPE_ON_TARGET and target_cal[eUID].is_chronos_origin:
+                if target_cal[eUID].is_chronos_origin:
                     del_event = target_cal[eUID]
                     del_event.calDAV.delete()
                     logger.debug(f'Deleted: {del_event.date} | {del_event.safe_title}')
