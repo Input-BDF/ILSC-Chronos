@@ -19,6 +19,16 @@ def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str)
     return result
 
 
+def convert_to_date_or_utc_datetime(date_or_datetime: dt.date | dt.datetime) -> dt.date | dt.datetime:
+    if isinstance(date_or_datetime, dt.datetime):
+        result = date_or_datetime.astimezone(dt.UTC)
+    elif isinstance(date_or_datetime, dt.date):
+        result = date_or_datetime
+    else:
+        raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
+    return result
+
+
 def enable_remote_debug(app_config: Config, logger: Logger):
     try:
         import netifaces as ni

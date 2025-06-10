@@ -33,15 +33,6 @@ logger = get_app_logger()
 
 
 
-def convert_to_date_or_utc_datetime(date_or_datetime: dt.date | dt.datetime) -> dt.date | dt.datetime:
-    if isinstance(date_or_datetime, dt.datetime):
-        result = date_or_datetime.astimezone(dt.UTC)
-    elif isinstance(date_or_datetime, dt.date):
-        result = date_or_datetime
-    else:
-        raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
-    return result
-
 
 class ILSCEvent:
     
@@ -280,9 +271,9 @@ class ILSCEvent:
             raw_dtstart = self.ical.get('dtstart')
             raw_dtend = self.ical.get('dtend')
 
-            self.created = convert_to_date_or_utc_datetime(raw_dtstamp.dt)
-            self.dt_start = convert_to_date_or_utc_datetime(raw_dtstart.dt)
-            self.dt_end = convert_to_date_or_utc_datetime(raw_dtend.dt)
+            self.created = helpers.convert_to_date_or_utc_datetime(raw_dtstamp.dt)
+            self.dt_start = helpers.convert_to_date_or_utc_datetime(raw_dtstart.dt)
+            self.dt_end = helpers.convert_to_date_or_utc_datetime(raw_dtend.dt)
             
             self.date = self._get_ical_start_date()
             
