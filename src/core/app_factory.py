@@ -563,6 +563,7 @@ class CalendarHandler:
             if not new_ilsc_event.is_confidential and not new_ilsc_event.is_excluded and not new_ilsc_event.date_out_of_range:
                 new_ilsc_event.populate_from_vcal_object()
                 
+                # TODO 2025-06-11 put into helper function for date range check
                 # determine limits of time range with timezone info
                 today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
                 range_min = self.app_config.get('calendars', 'range_min')
