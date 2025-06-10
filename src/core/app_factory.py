@@ -27,21 +27,11 @@ import pytz
 # own code
 from core.log_factory import get_app_logger
 from core.config import Config
+from core import helpers
 
 logger = get_app_logger()
 
 
-def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
-    '''
-    convert to given timezone
-    '''
-    if isinstance(date_time, dt.datetime):
-        result = pytz.timezone(time_zone).normalize(date_time)
-    elif isinstance(date_time, dt.date):
-        result = date_time
-    else:
-        raise ValueError(f"argument type ({type(date_time)}) not supported")
-    return result
 
 def convert_to_date_or_utc_datetime(date_or_datetime: dt.date | dt.datetime) -> dt.date | dt.datetime:
     if isinstance(date_or_datetime, dt.datetime):

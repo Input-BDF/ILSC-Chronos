@@ -1,5 +1,22 @@
 from logging import Logger
+import datetime as dt
+
+import pytz
+
 from core.config import Config
+
+
+def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
+    '''
+    convert to given timezone
+    '''
+    if isinstance(date_time, dt.datetime):
+        result = pytz.timezone(time_zone).normalize(date_time)
+    elif isinstance(date_time, dt.date):
+        result = date_time
+    else:
+        raise ValueError(f"argument type ({type(date_time)}) not supported")
+    return result
 
 
 def enable_remote_debug(app_config: Config, logger: Logger):
@@ -34,3 +51,5 @@ def enable_remote_debug(app_config: Config, logger: Logger):
         logger.debug('RemoteDebug: Could not import pydevd')
     except Exception as ex:
         logger.debug(f'RemoteDebug: General Exception {ex}')
+
+        
