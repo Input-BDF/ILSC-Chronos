@@ -27,30 +27,11 @@ import pytz
 # own code
 from core.log_factory import get_app_logger
 from core.config import Config
+from core import helpers
 
 logger = get_app_logger()
 
 
-def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
-    '''
-    convert to given timezone
-    '''
-    if isinstance(date_time, dt.datetime):
-        result = pytz.timezone(time_zone).normalize(date_time)
-    elif isinstance(date_time, dt.date):
-        result = date_time
-    else:
-        raise ValueError(f"argument type ({type(date_time)}) not supported")
-    return result
-
-def convert_to_date_or_utc_datetime(date_or_datetime: dt.date | dt.datetime) -> dt.date | dt.datetime:
-    if isinstance(date_or_datetime, dt.datetime):
-        result = date_or_datetime.astimezone(dt.UTC)
-    elif isinstance(date_or_datetime, dt.date):
-        result = date_or_datetime
-    else:
-        raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
-    return result
 
 
 class ILSCEvent:
@@ -290,9 +271,9 @@ class ILSCEvent:
             raw_dtstart = self.ical.get('dtstart')
             raw_dtend = self.ical.get('dtend')
 
-            self.created = convert_to_date_or_utc_datetime(raw_dtstamp.dt)
-            self.dt_start = convert_to_date_or_utc_datetime(raw_dtstart.dt)
-            self.dt_end = convert_to_date_or_utc_datetime(raw_dtend.dt)
+            self.created = helpers.convert_to_date_or_utc_datetime(raw_dtstamp.dt)
+            self.dt_start = helpers.convert_to_date_or_utc_datetime(raw_dtstart.dt)
+            self.dt_end = helpers.convert_to_date_or_utc_datetime(raw_dtend.dt)
             
             self.date = self._get_ical_start_date()
             
@@ -582,6 +563,7 @@ class CalendarHandler:
             if not new_ilsc_event.is_confidential and not new_ilsc_event.is_excluded and not new_ilsc_event.date_out_of_range:
                 new_ilsc_event.populate_from_vcal_object()
                 
+                # TODO 2025-06-11 put into helper function for date range check
                 # determine limits of time range with timezone info
                 today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
                 range_min = self.app_config.get('calendars', 'range_min')
