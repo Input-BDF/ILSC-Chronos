@@ -5,43 +5,9 @@ Created on 24.02.2022
 @author: input
 '''
 
-from core import log_factory
+from core import log_factory, helpers
 from core.config import Config
-
-###
-# Debug
-def enable_remote_debug():
-    try:
-        import netifaces as ni
-        from os import path as ospath
-        logger.debug('RemoteDebug: Initializing')
-        _remote_ip = appConfig.get('debug', 'remote_server')
-        _remote_wd = appConfig.get('debug', 'remote_workdir')
-        _int_part = appConfig.get('debug', 'remote_iface_nr')
-        #In some cases interface has two adresses. 
-        #refer https://pypi.org/project/netifaces/
-        _ifaces = ni.ifaddresses(appConfig.get('debug', 'remote_interface'))
-        _local_ip = _ifaces[ni.AF_INET][int(_int_part)]['addr']
-        logger.debug(f'RemoteDebug: Running on {_local_ip}')
-        _path = ospath.dirname(ospath.abspath(__file__)).replace('/','\\')
-    except Exception as ex:
-        logger.debug(f'RemoteDebug: Init failed: {ex}')
-        logger.debug(f'RemoteDebug: Available ifaces: {_ifaces}')
-        return
-    try: 
-        import pydevd
-        from pydevd_file_utils import setup_client_server_paths
-        MY_PATHS_FROM_ECLIPSE_TO_PYTHON = [
-            (fr'{_remote_wd}\{_local_ip}{_path}', fr'{_path}'),
-            (fr'{_remote_wd}\{_local_ip}\usr\local\bin', r'/usr/local/bin'),
-        ]
-        setup_client_server_paths(MY_PATHS_FROM_ECLIPSE_TO_PYTHON)
-        pydevd.settrace(_remote_ip ,stdoutToServer=True, stderrToServer=True)
-        
-    except ImportError:
-        logger.debug('RemoteDebug: Could not import pydevd')
-    except Exception as ex:
-        logger.debug(f'RemoteDebug: General Exception {ex}')
+from core.app_factory import AppFactory
 
 ###
 # Init all stuff
@@ -53,9 +19,8 @@ except Exception as ex:
     print(ex)
 
 if appConfig.get('debug', 'remote'):
-    enable_remote_debug()
+    helpers.enable_remote_debug(appConfig, logger)
 
-from core.app_factory import AppFactory
 
 logger.info('---- Initialized - going up ----')
 

@@ -6,9 +6,10 @@ Created on 25.02.2022
 '''
 
 # python lib
-from datetime import datetime, timedelta
 from hashlib import md5
+from pathlib import Path
 from string import Template
+from urllib.request import urlretrieve
 import datetime as dt
 import json
 import regex
@@ -24,41 +25,49 @@ import icalendar
 import pytz
 
 # own code
-from __main__ import appConfig
 from core.log_factory import get_app_logger
+from core.config import Config
 
 logger = get_app_logger()
 
-TimeZone = pytz.timezone(appConfig.get('app','timezone'))
 
-APP_ID = appConfig.get('app', 'app_id')
-RANGE_MIN = appConfig.get('calendars', 'range_min')
-RANGE_MAX = appConfig.get('calendars', 'range_max')
-WIPE_ON_TARGET = appConfig.get('calendars', 'delete_on_target')
-
-def set_tz(date_time, time_zone):
+def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
     '''
     convert to given timezone
     '''
-    if isinstance(date_time, datetime):
-        return pytz.timezone(time_zone).normalize(date_time)
-    return date_time
+    if isinstance(date_time, dt.datetime):
+        result = pytz.timezone(time_zone).normalize(date_time)
+    elif isinstance(date_time, dt.date):
+        result = date_time
+    else:
+        raise ValueError(f"argument type ({type(date_time)}) not supported")
+    return result
+
+def convert_to_date_or_utc_datetime(date_or_datetime: dt.date | dt.datetime) -> dt.date | dt.datetime:
+    if isinstance(date_or_datetime, dt.datetime):
+        result = date_or_datetime.astimezone(dt.UTC)
+    elif isinstance(date_or_datetime, dt.date):
+        result = date_or_datetime
+    else:
+        raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
+    return result
+
 
 class ILSCEvent:
     
-    def __init__(self, source):
-        self.source = source
+    def __init__(self, source: "CalendarHandler"):
+        self.source: "CalendarHandler" = source
         
         self.uid = uuid.uuid1()
-        self.created: dt.datetime = datetime.now()
-        self.date: dt.datetime = None
+        self.created: dt.datetime = dt.datetime.now()
+        self.date: dt.date = None
         self.dt_start: dt.datetime = None
         self.dt_end: dt.datetime = None
-        self.description = None
-        self.location = None
+        self.description: str = None
+        self.location: str = None
         
-        self.calDAV: caldav.Event = None
-        self.icalendar_component: icalendar.Event = None
+        self.calDAV: caldav.Event | None = None
+        self._ics_event: icalendar.Event | None = None
     
     def __repr__(self):
         return f"ILSCEvent - {self.date} | {self.title}"
@@ -78,12 +87,18 @@ class ILSCEvent:
     
     @property
     def ical(self) -> caldav.Event:
-        return self.calDAV.icalendar_component if self.calDAV else None
+        if self.calDAV is not None:
+            return self.calDAV.icalendar_component
+        if self._ics_event is not None:
+            return self._ics_event
+        message = "neither self.calDAV.icalendar_component (for calendars from CalDAV input)"
+        message += " nor self._ics_event (for calendars from ICS file input) is given"
+        raise ValueError(message)
     
     @property
     def is_chronos_origin(self) -> bool:
         ''' check if chronos was creator of this event '''
-        return self.origin == APP_ID
+        return self.origin == self.source.app_config.get('app', 'app_id')
     
     @property
     def remote_changed(self) -> bool:
@@ -94,7 +109,7 @@ class ILSCEvent:
         return True if _mod else False  
     
     @property
-    def last_modified(self) -> datetime:
+    def last_modified(self) -> dt.datetime:
         '''return last modification date. if event never was modified the creation date is provided'''
         _mod = self.ical.get('last-modified')
         return _mod.dt if _mod else self.ical.get('dtstamp').dt
@@ -117,7 +132,8 @@ class ILSCEvent:
     def prefixed_title(self) -> str:
         '''return title prefixed with string defined in calender config'''
         if self.source.title_prefix and self.source.sanitize_icons_tgt: 
-            _pre = Template(appConfig.get('calendars','prefix_format')).substitute(icons = self.icons, prefix = self.source.title_prefix).strip()
+            _prefix_format = self.source.app_config.get('calendars','prefix_format')
+            _pre = Template(_prefix_format).substitute(icons = self.icons, prefix = self.source.title_prefix).strip()
             return f"{_pre} | {self.title}"
         if self.source.title_prefix:
             return f"{self.source.title_prefix} | {self.title}"
@@ -137,9 +153,10 @@ class ILSCEvent:
     def is_all_day(self):
         '''
         check if event is set as allday event - no time given
-        (assuption till now)
+        (assumption till now)
         '''
-        return not( isinstance(self.dt_end, dt.datetime) and isinstance(self.dt_start, dt.datetime) )
+        result = not( isinstance(self.dt_end, dt.datetime) and isinstance(self.dt_start, dt.datetime) )
+        return result
     
     @property
     def duration(self):
@@ -151,7 +168,7 @@ class ILSCEvent:
     @property
     def is_multiday(self):
         'check if event is multiday (more than 24h) event. 1-allday == 24h'
-        return self.duration > timedelta(hours = 24)
+        return self.duration > dt.timedelta(hours = 24)
     
     @property
     def is_planned(self) -> bool:
@@ -184,7 +201,10 @@ class ILSCEvent:
     
     @property
     def is_confidential(self) -> bool:
-        confidential = False if ( not self.ical.get('class') ) or self.ical.get('class') == "PUBLIC" else True 
+        class_content = self.ical.get('class')
+        # "CLASS" entry being not set means that it is "PUBLIC" (as it is the default value)
+        is_public = class_content is None or class_content == "PUBLIC"
+        confidential = not is_public
         return confidential
     
     @property
@@ -198,30 +218,37 @@ class ILSCEvent:
     def status(self):
         return self.ical.get('status')
     
-    def _make_date(self, idate, force_time):
+    def _make_date(self, idate: icalDate, force_time: str):
         #allday:
         if self.is_all_day and self.is_multiday:
             return idate
+
         #affects only 24h allday events
         if self.is_all_day and not(self.is_multiday) and self.source.force_time:
             try:
-                _time = datetime.strptime(force_time, '%H:%M').time()
-                return TimeZone.localize(datetime.combine(self.dt_start, _time))
+                _time = dt.datetime.strptime(force_time, '%H:%M').time()
+                app_timezone = pytz.timezone(self.source.app_config.get('app','timezone'))
+                combined_datetime = dt.datetime.combine(self.dt_start, _time)
+                localized_combined_datetime = app_timezone.localize(combined_datetime)
+                return localized_combined_datetime
             except ValueError as ve:
                 raise ValueError(f'Incompatible time format given. Check %H:%M - {ve}')
             except Exception as ex:
                 logger.critical(f'Can not read calendars forced time configuration - {ex}')
                 raise
+
         #Pass original date
         return idate
     
     @property
     def date_start(self):
-        return self._make_date(self.dt_start, self.source.force_start)
+        result = self._make_date(self.dt_start, self.source.force_start)
+        return result
     
     @property
     def date_end(self):
-        return self._make_date(self.dt_end, self.source.force_end)
+        result = self._make_date(self.dt_end, self.source.force_end)
+        return result
     
     @property
     def date_out_of_range(self) -> bool:
@@ -229,7 +256,8 @@ class ILSCEvent:
             target = self._get_ical_start_date()
             today = dt.date.today()
             delta = (target - today).days
-            out_of_range = delta > ( RANGE_MAX - 1 )  # Reduce by two days to bypass assumed day drift in Calendar selection
+            range_max = self.source.app_config.get('calendars', 'range_max')
+            out_of_range = delta > ( range_max - 1 )  # Reduce by two days to bypass assumed day drift in Calendar selection
             return out_of_range 
         except Exception as ex:
             logger.critical(f'Could not determine day distance')
@@ -250,16 +278,21 @@ class ILSCEvent:
             return self.source_uid.encode('utf-8')
         return f'{self.uid}'.encode('utf-8')
 
-    def populate_from_vcal_object(self):
-        #TODO: enshure uid exists (at least it should )
+    def populate_from_vcal_object(self) -> None:
+        #TODO: ensure UID exists (at least it should )
         try:
             self.uid = str(self.ical.get('uid'))
             if self.is_confidential or self.is_excluded:
                 logger.info(f"Skipping further ical parsing on confidential or excluded event: {self.uid} | Source: {self.source.cal_name}")
                 return
-            self.created = self.ical.get('dtstamp').dt
-            self.dt_start = set_tz(self.ical.get('dtstart').dt, self.source.time_zone)
-            self.dt_end = set_tz(self.ical.get('dtend').dt, self.source.time_zone)
+            
+            raw_dtstamp = self.ical.get('dtstamp')
+            raw_dtstart = self.ical.get('dtstart')
+            raw_dtend = self.ical.get('dtend')
+
+            self.created = convert_to_date_or_utc_datetime(raw_dtstamp.dt)
+            self.dt_start = convert_to_date_or_utc_datetime(raw_dtstart.dt)
+            self.dt_end = convert_to_date_or_utc_datetime(raw_dtend.dt)
             
             self.date = self._get_ical_start_date()
             
@@ -269,9 +302,9 @@ class ILSCEvent:
             logger.error(f"Could not process Event UID: {self.uid} | Source: {self.source.cal_name} | Reason: - {ex}")
             raise ex
 
-    def _get_ical_start_date(self):
+    def _get_ical_start_date(self) -> dt.date:
         _date = self.ical.get('dtstart').dt
-        if isinstance(_date, datetime):
+        if isinstance(_date, dt.datetime):
             return _date.date()
         return _date
 
@@ -318,7 +351,9 @@ class ILSCEvent:
     
     def create_ical_event(self) -> icalEvent:
         new_event=icalEvent()
-        _now = TimeZone.localize(datetime.now())
+
+        app_timezone = pytz.timezone(self.source.app_config.get('app','timezone'))
+        _now = app_timezone.localize(dt.datetime.now())
 
         #set random uuid to support getting arround nextcloud deleting problem
         new_event.add('uid', uuid.uuid1())
@@ -330,18 +365,22 @@ class ILSCEvent:
         
         if self.source.ignore_descriptions == False and self.description:
             new_event.add('description', self.sanitize_description())
+
         if self.location == None:
             new_event.add('location', self.source.default_location)
         else:
             new_event.add('location', self.location)
+
         new_event.add('categories', self.combine_categories(self.source.tags))
         new_event.add('status', self.status)
+        
         if self.source.color:
             new_event.add('color', self.source.color)
+
         ####
         #CUSTOM PROPERTIES
         #TODO: Check existence after updating with HIDs (works on rainlendar, android phone [google calendar, jorte] 
-        new_event.add('X-ILSC-ORIGIN', APP_ID)
+        new_event.add('X-ILSC-ORIGIN', self.source.app_config.get('app', 'app_id'))
         new_event.add('X-ILSC-CREATED', str(_now))
         new_event.add('X-ILSC-CALID', self.source.chronos_id)
         new_event.add('X-ILSC-UID', self.key)
@@ -372,7 +411,7 @@ class ILSCEvent:
         self.calDAV.icalendar_component['dtstart'] = icalDate(src_event.date_start)
         self.calDAV.icalendar_component['dtend'] = icalDate(src_event.date_end)
         #add/update last modified parameter cause nextcloud does not
-        self.calDAV.icalendar_component['last-modified'] = icalDate(datetime.now())
+        self.calDAV.icalendar_component['last-modified'] = icalDate(dt.datetime.now())
         
         self.calDAV.icalendar_component['status'] = src_event.status
         if ( src_event.source.ignore_planned and src_event.is_planned ) or src_event.is_confidential or src_event.is_excluded:
@@ -438,10 +477,14 @@ class ILSCEvent:
 
 class CalendarHandler:
     
-    def __init__(self):
-        self.last_check = TimeZone.localize(datetime.now() - timedelta(days = 7))
+    def __init__(self, app_config: Config):
+        self.app_config = app_config
         
-        self.events_data = {}
+
+        app_timezone = pytz.timezone(self.app_config.get('app','timezone'))
+        self.last_check = app_timezone.localize(dt.datetime.now() - dt.timedelta(days = 7))
+        
+        self.events_data: dict[str, ILSCEvent] = {}
         
         self.client = None
         self.calendar = None
@@ -476,7 +519,8 @@ class CalendarHandler:
     
     @property
     def chronos_id(self) -> str:
-        return md5(f'{self.cal_name}_{self.cal_primary}'.encode('utf-8')).hexdigest()
+        result = md5(f'{self.cal_name}_{self.cal_primary}'.encode('utf-8')).hexdigest()
+        return result
     
     @property
     def sanitize_stati(self) -> bool:
@@ -496,11 +540,83 @@ class CalendarHandler:
                 #setattr(self, key, getattr(self, key) | val)
                 setattr(self, key, {**getattr(self, key), **val})
             else:
-                setattr(self, key, val) 
+                setattr(self, key, val)
+
     
-    def read(self):
+    def read(self) -> None:
+        ''' read calendar events. decides if it is from a ICS file or from a CalDAV calendar. '''
+
+        if ".ics" in self.cal_primary:
+            self.read_ics_from_url()
+        else:
+            self.read_from_cal_dav()
+    
+    def read_ics_from_url(self):
+        ''' read events form .ics file from a calendars primary adress '''
+
+        # can't open ICS file directly, so first download
+        pathname_tmp = Path("./tmp")
+        pathname_tmp.mkdir(parents=True, exist_ok=True)
+        fn_cal = pathname_tmp / f"tmp_{self.cal_name}.ics"
+        urlretrieve(self.cal_primary, fn_cal)
+
+        # TODO 2025-04-21 handle ICS file not being accessible
+
+        with fn_cal.open(encoding="utf-8") as f:
+            calendar_contents = f.read()
+            ics_calendar = icalendar.Calendar.from_ical(calendar_contents)
+
+        if str(ics_calendar["X-WR-CALNAME"]) != self.cal_name:
+            return
+        
+        self.events_data = {}
+        
+        for event in ics_calendar.walk("VEVENT"):
+            event_summary = str(event.get("SUMMARY"))
+            print(f"{event_summary=}")
+
+            new_ilsc_event = ILSCEvent(self)
+            new_ilsc_event._ics_event = event.copy()
+                
+            #Only handle public events and those not conataining exclude tags
+            if not new_ilsc_event.is_confidential and not new_ilsc_event.is_excluded and not new_ilsc_event.date_out_of_range:
+                new_ilsc_event.populate_from_vcal_object()
+                
+                # determine limits of time range with timezone info
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                range_min = self.app_config.get('calendars', 'range_min')
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
+                range_max = self.app_config.get('calendars', 'range_max')
+                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
+
+                # handle different input types (dt.date or dt.datetime) with timezone info
+                app_timezone = pytz.timezone(self.app_config.get('app','timezone'))
+                if isinstance(new_ilsc_event.dt_start, dt.datetime):
+                    dt_start = new_ilsc_event.dt_start
+                else:
+                    dt_start = dt.datetime(year=new_ilsc_event.dt_start.year, month=new_ilsc_event.dt_start.month, day=new_ilsc_event.dt_start.day, tzinfo=app_timezone)
+
+                if isinstance(new_ilsc_event.dt_end, dt.datetime):
+                    dt_end = new_ilsc_event.dt_end
+                else:
+                    dt_end = dt.datetime(year=new_ilsc_event.dt_end.year, month=new_ilsc_event.dt_end.month, day=new_ilsc_event.dt_end.day, tzinfo=app_timezone)
+
+                # check for limits
+                if dt_start < limit_start_date:
+                    print("event is in the past")
+                    continue
+                
+                if dt_end > limit_end_date:
+                    print("event is in the far future")
+                    continue
+
+                self.events_data[new_ilsc_event.key] = new_ilsc_event
+
+
+    def read_from_cal_dav(self) -> None:
         '''read events from caldav calendar'''
         logger.debug(f'Connecting Calendar "{self.cal_name}"')
+
         start = time.time()
         try:
             self.client = caldav.DAVClient(self.cal_primary, username=self.cal_user,
@@ -509,27 +625,34 @@ class CalendarHandler:
         except Exception as ex:
             logger.critical(f'Error on CALDav auth: {ex}')
             raise
+
         self.events_data = {}
+
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
         start = time.time()
-        logger.debug('Reading Events') 
-        for calendar in self.available_calendars():
+
+        logger.debug('Reading Events')
+        list_available_calendars = self.available_calendars()
+        for calendar in list_available_calendars:
             if calendar and calendar.name == self.cal_name:
                 self.calendar = calendar
                 #TODO: Check if timezone or utc converion is needed
                 #had to add 2 hours else duplicates are created
-                start_date = datetime.today().replace(hour=2, minute=0, second=0, microsecond=0) + timedelta(days = RANGE_MIN)
-                end_date = start_date + timedelta(days=RANGE_MAX)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                range_min = self.app_config.get('calendars', 'range_min')
+                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
+                range_max = self.app_config.get('calendars', 'range_max')
+                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
                 
-                logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {start_date} to {end_date}')
+                logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
                 
                 try:
                     upcoming_events = calendar.date_search(
-                        start=start_date, end=end_date, compfilter="VEVENT", expand=True)
+                        start=limit_start_date, end=limit_end_date, compfilter="VEVENT", expand=True)
                 except:
                     #print("Your calendar server does apparently not support expanded search")
                     upcoming_events = calendar.date_search(
-                        start=start_date, end=end_date, expand=False)
+                        start=limit_start_date, end=limit_end_date, expand=False)
                 #get all events
                 #events = calendar.events()
                 for event in upcoming_events:
@@ -542,7 +665,11 @@ class CalendarHandler:
         #dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
         logger.debug('Time needed: {:.2f}s'.format(time.time() - start))
 
-    def available_calendars(self):
+        if self.calendar is None:
+            raise ValueError(f"read_from_cal_dav: target calendar '{self.cal_name}' was not found!")
+
+
+    def available_calendars(self) -> list[caldav.Calendar]:
         cals = self.principal.calendars()
         logger.info(f'Fetching available calendars on: {self.cal_name}')
         logger.debug('Found:')
@@ -550,7 +677,7 @@ class CalendarHandler:
             logger.debug(f'\t{cal.name}')
         return cals
     
-    def read_event(self, calEvent: caldav.Event):
+    def read_event(self, calEvent: caldav.Event) -> None:
         '''read event data'''
         #TODO: Clean this mess. As there should only be one vevent component. at least if caldav filter is working
         cal = Calendar.from_ical(calEvent.data)
@@ -566,12 +693,13 @@ class CalendarHandler:
                     edate = edate.date()
                 #if edate >= date.start_date():
                 '''
-                event = ILSCEvent(self)
-                event.calDAV = calEvent
+                ilsc_event = ILSCEvent(self)
+                ilsc_event.calDAV = calEvent
+                
                 #Only handle public events and those not conataining exclude tags
-                if not event.is_confidential and not event.is_excluded and not event.date_out_of_range:
-                    event.populate_from_vcal_object()
-                    self.events_data[event.key] = event
+                if not ilsc_event.is_confidential and not ilsc_event.is_excluded and not ilsc_event.date_out_of_range:
+                    ilsc_event.populate_from_vcal_object()
+                    self.events_data[ilsc_event.key] = ilsc_event
     
     def search_events_by_tags(self, tags:list) -> dict:
         '''search read events created by chronos with given tags
@@ -583,7 +711,7 @@ class CalendarHandler:
                 found[key] = event
         return found
 
-    def search_events_by_calid(self, calid:str) -> dict:
+    def search_events_by_calid(self, calid:str) -> dict[str, ILSCEvent]:
         '''search read events created by chronos with given calendar id'''
         found = {}
         for key, event in self.events_data.items():
@@ -592,11 +720,11 @@ class CalendarHandler:
         return found
 
 class AppFactory:
-    def __init__(self, config: appConfig):
-        self.config = config
-        self.scheduler = BackgroundScheduler({'apscheduler.timezone': self.config.get('app','timezone')})
+    def __init__(self, app_config: Config):
+        self.app_config = app_config
+        self.scheduler = BackgroundScheduler({'apscheduler.timezone': self.app_config.get('app','timezone')})
         
-        self.calendars = []
+        self.calendars: list[CalendarHandler] = []
         self.target = None
         
         self.active = False
@@ -610,18 +738,18 @@ class AppFactory:
         logger.debug('Base elements created')
     
     def read_cal_config(self) -> tuple[dict, dict, dict]:
-        with open(self.config.get('calendars', 'file'), 'r', encoding='utf-8') as f:
+        with open(self.app_config.get('calendars', 'file'), 'r', encoding='utf-8') as f:
             _data = json.load(f)
         return _data['target'], _data['calendars'], _data['icons']
         
     def set_calendars(self, target_data : list, calendars_data : dict, icons : dict) -> None:
         target_data['icons'] = icons
-        self.target = CalendarHandler()
+        self.target = CalendarHandler(self.app_config)
         self.target.config(target_data)
         
         for cal in calendars_data:
             cal['icons'] = icons
-            _calendar = CalendarHandler()
+            _calendar = CalendarHandler(self.app_config)
             _calendar.config(cal)
             self.calendars.append(_calendar)
     
@@ -646,9 +774,11 @@ class AppFactory:
     
     def init_schedulers(self) -> None:
         #self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)
-        self.scheduler.add_job(self.cron_app, 'cron', id="smallfish", hour=f'*/{self.config.get("app","appcron")}', minute=0)
-        self.scheduler.add_job(self.cron_app, 'cron', id="catfish", minute=f'{self.config.get("app","datacron")}')
-        self.scheduler.start()
+        # self.scheduler.add_job(self.cron_app, 'cron', id="smallfish", hour=f'*/{self.config.get("app","appcron")}', minute=0)
+        # self.scheduler.add_job(self.cron_app, 'cron', id="catfish", minute=f'{self.config.get("app","datacron")}')
+        # self.scheduler.start()
+        # TODO 2025-04-21 reenable schedulers. disabled for debugging.
+        pass
     
     def run(self) -> None:
         self.active = True
@@ -672,9 +802,10 @@ class AppFactory:
             logger.critical(f'Cron excecution failed. Reason {ex}')
     
     def sync_calendars(self) -> None:
+        app_timezone = pytz.timezone(self.app_config.get('app','timezone'))
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
-            c.last_check = TimeZone.localize(datetime.now())
+            c.last_check = app_timezone.localize(dt.datetime.now())
             logger.success(f'Done comparing with "{c.cal_name}". {len(changed)} entries updated. {len(new)} entries added. {len(deleted)} entries deleted.')
     
     def sync_calendar(self, calendar: CalendarHandler) -> tuple[dict, dict, dict]:
@@ -709,6 +840,11 @@ class AppFactory:
     
     def _delete_target_events(self, calendar: CalendarHandler) -> dict:
         '''delete target iCal events not in source calendar'''
+
+        wipe_on_target = self.app_config.get('calendars', 'delete_on_target')
+        if not wipe_on_target:
+            return {}
+        
         source_cal = calendar.events_data
         #target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
@@ -717,7 +853,7 @@ class AppFactory:
         
         for eUID in deleteSet:
             try:
-                if WIPE_ON_TARGET and target_cal[eUID].is_chronos_origin:
+                if target_cal[eUID].is_chronos_origin:
                     del_event = target_cal[eUID]
                     del_event.calDAV.delete()
                     logger.debug(f'Deleted: {del_event.date} | {del_event.safe_title}')
