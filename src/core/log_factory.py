@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on 29.01.2022
 
@@ -8,16 +7,9 @@ Created on 29.01.2022
 import os
 
 import logging
-from logging.handlers import (
-    TimedRotatingFileHandler,
-)
+from logging.handlers import TimedRotatingFileHandler
 
-from colorama import (
-    init,
-    Fore,
-    Back,
-    Style,
-)
+from colorama import init, Fore, Back, Style
 
 ###
 # Formats
