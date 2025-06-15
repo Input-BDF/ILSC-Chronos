@@ -17,7 +17,7 @@ import uuid
 
 # external libs
 from apscheduler.schedulers.background import BackgroundScheduler
-from icalendar import Calendar, Event as icalEvent, vDDDTypes as icalDate, vText
+from icalendar import vDDDTypes as icalDate
 from icalendar.prop import vCategory
 import caldav
 import icalendar
@@ -285,7 +285,7 @@ class ILSCEvent:
             return _date.date()
         return _date
 
-    def _clear_title(self, title: vText) -> str:
+    def _clear_title(self, title: icalendar.vText) -> str:
         """
         Search for first occurance of any Prefix and replace
         Assumes that someone or thing added prefixes
@@ -316,7 +316,7 @@ class ILSCEvent:
         nocmt = regex.sub(_reg, "", text)
         return nocmt
 
-    def sanitize_description(self) -> vText:
+    def sanitize_description(self) -> icalendar.vText:
         try:
             _desc = self.description.to_ical().decode("utf-8")
         except:
@@ -326,8 +326,8 @@ class ILSCEvent:
         nocmt = self._strip_newlines(nocmt)
         return icalendar.vText(nocmt)
 
-    def create_ical_event(self) -> icalEvent:
-        new_event = icalEvent()
+    def create_ical_event(self) -> icalendar.Event:
+        new_event = icalendar.Event()
 
         app_timezone = pytz.timezone(self.source.app_config.get("app", "timezone"))
         _now = app_timezone.localize(dt.datetime.now())
@@ -662,7 +662,7 @@ class CalendarHandler:
     def read_event(self, calEvent: caldav.Event) -> None:
         """read event data"""
         # TODO: Clean this mess. As there should only be one vevent component. at least if caldav filter is working
-        cal = Calendar.from_ical(calEvent.data)
+        cal = icalendar.Calendar.from_ical(calEvent.data)
         components = cal.walk("vevent")
         # logger.debug(f'Nr of vevent components {len(components)}')
         for component in components:
@@ -850,7 +850,7 @@ class AppFactory:
         # target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
-        new_events: dict[vText, ILSCEvent] = {}
+        new_events: dict[icalendar.vText, ILSCEvent] = {}
 
         for eUID in newSet:
             new_event = source_cal[eUID]
@@ -869,7 +869,7 @@ class AppFactory:
                 continue
 
             try:
-                _cal = Calendar()
+                _cal = icalendar.Calendar()
                 vevent = new_event.create_ical_event()
 
                 _cal.add_component(vevent)
