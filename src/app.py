@@ -10,14 +10,9 @@ from core import helpers
 from core.config import Config
 from core.app_factory import AppFactory
 
-###
 # Init all stuff
-try:
-    appConfig = Config()
-    logger = logging.getLogger("chronos")
-except Exception as ex:
-    print(ex)
-
+logger = logging.getLogger("chronos")
+appConfig = Config()
 if appConfig.get("debug", "remote"):
     helpers.enable_remote_debug(appConfig, logger)
 
