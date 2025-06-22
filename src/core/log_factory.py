@@ -9,7 +9,7 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-from colorama import init, Fore, Back, Style
+import colorama
 
 ###
 # Formats
@@ -43,12 +43,12 @@ class CustomLogFormatter(logging.Formatter):
     """
 
     FORMATS = {
-        SUCCESS_LEVELV_NUM: f"{Fore.GREEN}{LogInfo}{Style.RESET_ALL}",
-        logging.DEBUG: f"{Fore.LIGHTBLACK_EX}{LogInfo}{Style.RESET_ALL}",
-        logging.INFO: f"{Fore.WHITE}{LogInfo}{Style.RESET_ALL}",
-        logging.WARNING: f"{Fore.RED}{LogFormatExt}{Style.RESET_ALL}",
-        logging.ERROR: f"{Back.RED}{LogFormatExt}{Style.RESET_ALL}",
-        logging.CRITICAL: f"{Back.RED}{Style.BRIGHT}{LogFormatExt}{Style.RESET_ALL}",
+        SUCCESS_LEVELV_NUM: f"{colorama.Fore.GREEN}{LogInfo}{colorama.Style.RESET_ALL}",
+        logging.DEBUG: f"{colorama.Fore.LIGHTBLACK_EX}{LogInfo}{colorama.Style.RESET_ALL}",
+        logging.INFO: f"{colorama.Fore.WHITE}{LogInfo}{colorama.Style.RESET_ALL}",
+        logging.WARNING: f"{colorama.Fore.RED}{LogFormatExt}{colorama.Style.RESET_ALL}",
+        logging.ERROR: f"{colorama.Back.RED}{LogFormatExt}{colorama.Style.RESET_ALL}",
+        logging.CRITICAL: f"{colorama.Back.RED}{colorama.Style.BRIGHT}{LogFormatExt}{colorama.Style.RESET_ALL}",
     }
 
     def format(
@@ -63,7 +63,7 @@ class CustomLogFormatter(logging.Formatter):
 def create():
     # use convert only only when developing on windoof directly
     _conv = True if os.name == "nt" else False
-    init(
+    colorama.init(
         autoreset=True,
         convert=True,
         strip=False,
@@ -77,7 +77,7 @@ def create():
 
     logger = get_app_logger()
 
-    logger.setLevel(logging.getLevelName("DEBUG"))
+    logger.setLevel("DEBUG")
     # create console handler with a higher log level
     consolelog = logging.StreamHandler()
     consolelog.setLevel(logging.DEBUG)
