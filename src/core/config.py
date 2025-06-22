@@ -11,13 +11,13 @@ import configparser
 import sys
 import ast
 import pathlib as pl
+import logging
 
 from collections import OrderedDict
 from copy import deepcopy
 
-from core.log_factory import get_app_logger
 
-logger = get_app_logger()
+logger = logging.getLogger(__name__)
 
 CommandLine = argparse.ArgumentParser()
 CommandLine.add_argument(
@@ -297,7 +297,7 @@ class Config:
         self._read_commandline_config()
         self._configure_file_paths()
 
-        logger.success("Configuration successful")
+        logger.info("Configuration successful")
 
     def get(self, section, param):
         return getattr(self, section)[param]

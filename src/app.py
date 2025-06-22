@@ -4,19 +4,15 @@ Created on 24.02.2022
 @author: input
 """
 
-from core import log_factory, helpers
+import logging
+
+from core import helpers
 from core.config import Config
 from core.app_factory import AppFactory
 
-###
 # Init all stuff
-try:
-    logger = log_factory.create()
-    appConfig = Config()
-    log_factory.init_config(appConfig.log)
-except Exception as ex:
-    print(ex)
-
+logger = logging.getLogger("chronos")
+appConfig = Config()
 if appConfig.get("debug", "remote"):
     helpers.enable_remote_debug(appConfig, logger)
 
