@@ -11,6 +11,7 @@ from string import Template
 from urllib.request import urlretrieve
 import datetime as dt
 import json
+import logging
 import regex
 import time
 import uuid
@@ -24,11 +25,10 @@ import icalendar
 import pytz
 
 # own code
-from core.log_factory import get_app_logger
 from core.config import Config
 from core import helpers
 
-logger = get_app_logger()
+logger = logging.getLogger(__name__)
 
 
 class ILSCEvent:
@@ -234,7 +234,8 @@ class ILSCEvent:
             today = dt.date.today()
             delta = (target - today).days
             range_max = self.source.app_config.get("calendars", "range_max")
-            out_of_range = delta > (range_max - 1)  # Reduce by two days to bypass assumed day drift in Calendar selection
+            # Reduce by two days to bypass assumed day drift in Calendar selection
+            out_of_range = delta > (range_max - 1)
             return out_of_range
         except Exception as ex:
             logger.critical(f"Could not determine day distance")
