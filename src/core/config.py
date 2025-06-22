@@ -297,7 +297,7 @@ class Config:
         self._read_commandline_config()
         self._configure_file_paths()
 
-        logger.success("Configuration successful")
+        logger.info("Configuration successful")
 
     def get(self, section, param):
         return getattr(self, section)[param]
