@@ -1,5 +1,5 @@
-from chronos.core import logging_helpers
-from chronos.core.config import Config
+from chronos import logging_helpers
+from chronos.config import Config
 
 
 app_config = Config()

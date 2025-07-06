@@ -6,9 +6,9 @@ Created on 24.02.2022
 
 import logging
 
-from chronos.core import helpers
-from chronos.core.config import Config
-from chronos.core.app_factory import AppFactory
+from chronos import helpers
+from chronos.config import Config
+from chronos.app_factory import AppFactory
 
 # Init all stuff
 logger = logging.getLogger("chronos")
