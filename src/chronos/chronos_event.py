@@ -15,10 +15,11 @@ import icalendar
 import pytz
 
 # own code
-from chronos.core import helpers
+from chronos import helpers
 
+# typing workaround to prevent circular import
 if TYPE_CHECKING:
-    from chronos.core.calendar_handler import CalendarHandler
+    from chronos.calendar_handler import CalendarHandler
 
 
 logger = logging.getLogger(__name__)

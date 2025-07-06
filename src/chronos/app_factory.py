@@ -16,9 +16,9 @@ import icalendar
 import pytz
 
 # own code
-from chronos.core.config import Config
-from chronos.core.calendar_handler import CalendarHandler
-from chronos.core.chronos_event import ChronosEvent
+from chronos.config import Config
+from chronos.calendar_handler import CalendarHandler
+from chronos.chronos_event import ChronosEvent
 
 logger = logging.getLogger(__name__)
 
