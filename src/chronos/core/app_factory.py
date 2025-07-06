@@ -25,8 +25,8 @@ import icalendar
 import pytz
 
 # own code
-from core.config import Config
-from core import helpers
+from chronos.core.config import Config
+from chronos.core import helpers
 
 logger = logging.getLogger(__name__)
 
