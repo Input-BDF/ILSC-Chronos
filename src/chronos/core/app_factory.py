@@ -31,7 +31,7 @@ from chronos.core import helpers
 logger = logging.getLogger(__name__)
 
 
-class ILSCEvent:
+class ChronosEvent:
     def __init__(self, source: "CalendarHandler"):
         self.source: "CalendarHandler" = source
 
@@ -47,7 +47,7 @@ class ILSCEvent:
         self._ics_event: icalendar.Event | None = None
 
     def __repr__(self):
-        return f"ILSCEvent - {self.date} | {self.title}"
+        return f"ChronosEvent - {self.date} | {self.title}"
 
     @property
     def has_title(self):
@@ -461,7 +461,7 @@ class CalendarHandler:
         app_timezone = pytz.timezone(self.app_config.get("app", "timezone"))
         self.last_check = app_timezone.localize(dt.datetime.now() - dt.timedelta(days=7))
 
-        self.events_data: dict[str, ILSCEvent] = {}
+        self.events_data: dict[str, ChronosEvent] = {}
 
         self.client = None
         self.calendar = None
@@ -547,12 +547,12 @@ class CalendarHandler:
             event_summary = str(event.get("SUMMARY"))
             print(f"{event_summary=}")
 
-            new_ilsc_event = ILSCEvent(self)
-            new_ilsc_event._ics_event = event.copy()
+            new_chronos_event = ChronosEvent(self)
+            new_chronos_event._ics_event = event.copy()
 
             # Only handle public events and those not conataining exclude tags
-            if not new_ilsc_event.is_confidential and not new_ilsc_event.is_excluded and not new_ilsc_event.date_out_of_range:
-                new_ilsc_event.populate_from_vcal_object()
+            if not new_chronos_event.is_confidential and not new_chronos_event.is_excluded and not new_chronos_event.date_out_of_range:
+                new_chronos_event.populate_from_vcal_object()
 
                 # TODO 2025-06-11 put into helper function for date range check
                 # determine limits of time range with timezone info
@@ -564,23 +564,23 @@ class CalendarHandler:
 
                 # handle different input types (dt.date or dt.datetime) with timezone info
                 app_timezone = pytz.timezone(self.app_config.get("app", "timezone"))
-                if isinstance(new_ilsc_event.dt_start, dt.datetime):
-                    dt_start = new_ilsc_event.dt_start
+                if isinstance(new_chronos_event.dt_start, dt.datetime):
+                    dt_start = new_chronos_event.dt_start
                 else:
                     dt_start = dt.datetime(
-                        year=new_ilsc_event.dt_start.year,
-                        month=new_ilsc_event.dt_start.month,
-                        day=new_ilsc_event.dt_start.day,
+                        year=new_chronos_event.dt_start.year,
+                        month=new_chronos_event.dt_start.month,
+                        day=new_chronos_event.dt_start.day,
                         tzinfo=app_timezone,
                     )
 
-                if isinstance(new_ilsc_event.dt_end, dt.datetime):
-                    dt_end = new_ilsc_event.dt_end
+                if isinstance(new_chronos_event.dt_end, dt.datetime):
+                    dt_end = new_chronos_event.dt_end
                 else:
                     dt_end = dt.datetime(
-                        year=new_ilsc_event.dt_end.year,
-                        month=new_ilsc_event.dt_end.month,
-                        day=new_ilsc_event.dt_end.day,
+                        year=new_chronos_event.dt_end.year,
+                        month=new_chronos_event.dt_end.month,
+                        day=new_chronos_event.dt_end.day,
                         tzinfo=app_timezone,
                     )
 
@@ -593,7 +593,7 @@ class CalendarHandler:
                     print("event is in the far future")
                     continue
 
-                self.events_data[new_ilsc_event.key] = new_ilsc_event
+                self.events_data[new_chronos_event.key] = new_chronos_event
 
     def read_from_cal_dav(self) -> None:
         """read events from caldav calendar"""
@@ -676,13 +676,13 @@ class CalendarHandler:
                     edate = edate.date()
                 #if edate >= date.start_date():
                 """
-                ilsc_event = ILSCEvent(self)
-                ilsc_event.calDAV = calEvent
+                chronos_event = ChronosEvent(self)
+                chronos_event.calDAV = calEvent
 
                 # Only handle public events and those not conataining exclude tags
-                if not ilsc_event.is_confidential and not ilsc_event.is_excluded and not ilsc_event.date_out_of_range:
-                    ilsc_event.populate_from_vcal_object()
-                    self.events_data[ilsc_event.key] = ilsc_event
+                if not chronos_event.is_confidential and not chronos_event.is_excluded and not chronos_event.date_out_of_range:
+                    chronos_event.populate_from_vcal_object()
+                    self.events_data[chronos_event.key] = chronos_event
 
     def search_events_by_tags(self, tags: list) -> dict:
         """search read events created by chronos with given tags
@@ -694,7 +694,7 @@ class CalendarHandler:
                 found[key] = event
         return found
 
-    def search_events_by_calid(self, calid: str) -> dict[str, ILSCEvent]:
+    def search_events_by_calid(self, calid: str) -> dict[str, ChronosEvent]:
         """search read events created by chronos with given calendar id"""
         found = {}
         for key, event in self.events_data.items():
@@ -851,7 +851,7 @@ class AppFactory:
         # target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
-        new_events: dict[icalendar.vText, ILSCEvent] = {}
+        new_events: dict[icalendar.vText, ChronosEvent] = {}
 
         for eUID in newSet:
             new_event = source_cal[eUID]
