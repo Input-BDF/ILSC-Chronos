@@ -32,9 +32,6 @@
       "level": "DEBUG",
       "formatter": "default",
       "filename": "",
-      "interval": 1,
-      "when": "d",
-      "backupCount": 14,
       "encoding": "utf8"
     }
   },
