@@ -1,7 +1,11 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 import json
 import logging
 import logging.config
+
+if TYPE_CHECKING:
+    from chronos.config import Config
 
 
 SUCCESS_LEVELV_NUM = 21
@@ -23,7 +27,7 @@ def _success_logging_function(
         )
 
 
-def init_logging(chronos_config) -> None:
+def init_logging(app_config: "Config") -> None:
     logging.addLevelName(
         SUCCESS_LEVELV_NUM,
         "SUCCESS",
@@ -40,7 +44,7 @@ def init_logging(chronos_config) -> None:
         logging_settings = json.load(f)
 
     # resolve logging file paths and ensure parent directory existence
-    filename_logging = Path(chronos_config.log["path"]) / chronos_config.log["filename"]
+    filename_logging = Path(app_config.log["path"]) / app_config.log["filename"]
     if not filename_logging.parent.exists():
         filename_logging.parent.mkdir()
 
