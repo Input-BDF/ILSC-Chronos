@@ -17,7 +17,7 @@ import pytz
 # own code
 from chronos import helpers
 
-# typing workaround to prevent circular import
+# typing workaround to prevent circular import (see https://docs.python.org/3/library/typing.html#typing.TYPE_CHECKING)
 if TYPE_CHECKING:
     from chronos.calendar_handler import CalendarHandler
 
