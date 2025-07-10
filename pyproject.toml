@@ -15,5 +15,5 @@ dependencies = [
 requires-python = "~=3.11"
 description = "calendar event transmission service"
 readme = "readme.md"
-license = { file = "LICENSE" }
+license-files = ["LICENSE"]
 keywords = ["calendar", "synchronization"]

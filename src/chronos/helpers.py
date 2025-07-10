@@ -3,7 +3,7 @@ import datetime as dt
 
 import pytz
 
-from core.config import Config
+from chronos.config import Config
 
 
 def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
