@@ -109,8 +109,8 @@ class CalendarHandler:
         self.events_data = {}
 
         for event in ics_calendar.walk("VEVENT"):
-            event_summary = str(event.get("SUMMARY"))
-            print(f"{event_summary=}")
+            # event_summary = str(event.get("SUMMARY"))
+            # print(f"{event_summary=}")
 
             new_chronos_event = ChronosEvent(self)
             new_chronos_event._ics_event = event.copy()
@@ -151,11 +151,11 @@ class CalendarHandler:
 
                 # check for limits
                 if dt_start < limit_start_date:
-                    print("event is in the past")
+                    # print("event is in the past")
                     continue
 
                 if dt_end > limit_end_date:
-                    print("event is in the far future")
+                    # print("event is in the far future")
                     continue
 
                 self.events_data[new_chronos_event.key] = new_chronos_event
