@@ -52,6 +52,11 @@ def init_logging(app_config: "Config") -> None:
     handlers = logging_settings["handlers"]
     handlers["info_file_handler"]["filename"] = str(filename_logging)
 
+    # hand in TimedRotatingFileHandler configuration
+    handlers["info_file_handler"]["when"] = str(app_config.log["rotation"])
+    handlers["info_file_handler"]["interval"] = int(app_config.log["interval"])
+    handlers["info_file_handler"]["backupCount"] = int(app_config.log["backups"])
+
     logging.config.dictConfig(logging_settings)
 
     # improve performance by disabling (currently unused) thread/process info in logs
