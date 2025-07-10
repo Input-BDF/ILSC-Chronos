@@ -9,20 +9,22 @@ import logging
 from chronos import helpers
 from chronos.config import Config
 from chronos.app_factory import AppFactory
+from chronos import logging_helpers
 
 
 def main():
     # initialize all stuff
     logger = logging.getLogger("chronos")
 
-    appConfig = Config()
-    if appConfig.get("debug", "remote"):
-        helpers.enable_remote_debug(appConfig, logger)
+    app_config = Config()
+    logging_helpers.init_logging(app_config)
+    if app_config.get("debug", "remote"):
+        helpers.enable_remote_debug(app_config, logger)
 
     logger.info("---- Initialized - going up ----")
 
     try:
-        factory = AppFactory(appConfig)
+        factory = AppFactory(app_config)
         factory.create()
         factory.init_schedulers()
         factory.run()
