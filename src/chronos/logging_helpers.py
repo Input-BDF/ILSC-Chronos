@@ -3,8 +3,10 @@ import json
 import logging
 import logging.config
 
+from chronos.config import Config
 
-SUCCESS_LEVELV_NUM = 21
+
+SUCCESS_LEVEL_NUM = 21
 
 
 def _success_logging_function(
@@ -13,19 +15,19 @@ def _success_logging_function(
     *args,
     **kws,
 ):
-    if self.isEnabledFor(SUCCESS_LEVELV_NUM):
+    if self.isEnabledFor(SUCCESS_LEVEL_NUM):
         # Yes, logger takes its '*args' as 'args'.
         self._log(
-            SUCCESS_LEVELV_NUM,
+            SUCCESS_LEVEL_NUM,
             message,
             args,
             **kws,
         )
 
 
-def init_logging(chronos_config) -> None:
+def init_logging(app_config: "Config") -> None:
     logging.addLevelName(
-        SUCCESS_LEVELV_NUM,
+        SUCCESS_LEVEL_NUM,
         "SUCCESS",
     )
     LoggerClass = logging.getLoggerClass()
@@ -40,7 +42,7 @@ def init_logging(chronos_config) -> None:
         logging_settings = json.load(f)
 
     # resolve logging file paths and ensure parent directory existence
-    filename_logging = Path(chronos_config.log["path"]) / chronos_config.log["filename"]
+    filename_logging = Path(app_config.log["path"]) / app_config.log["filename"]
     if not filename_logging.parent.exists():
         filename_logging.parent.mkdir()
 
@@ -48,9 +50,9 @@ def init_logging(chronos_config) -> None:
     handlers = logging_settings["handlers"]
     handlers["info_file_handler"]["filename"] = str(filename_logging)
 
-    logging.config.dictConfig(logging_settings)
+    # hand in TimedRotatingFileHandler configuration
+    handlers["info_file_handler"]["when"] = str(app_config.log["rotation"])
+    handlers["info_file_handler"]["interval"] = int(app_config.log["interval"])
+    handlers["info_file_handler"]["backupCount"] = int(app_config.log["backups"])
 
-    # improve performance by disabling (currently unused) thread/process info in logs
-    # logging.logThreads = False
-    # logging.logProcesses = True
-    # logging._srcfile = None
+    logging.config.dictConfig(logging_settings)

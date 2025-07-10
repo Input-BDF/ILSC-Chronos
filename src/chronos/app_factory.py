@@ -76,9 +76,9 @@ class AppFactory:
                             logger.debug(f"Updated source event: {e.date} | {e.safe_title}")
 
     def init_schedulers(self) -> None:
-        # self.scheduler.add_job(lambda: self.start_data_collector(reset_count = True), 'cron', id=f"bigfish", hour=self.config.get('app', 'datacron'), minute=0)
-        # self.scheduler.add_job(self.cron_app, 'cron', id="smallfish", hour=f'*/{self.config.get("app","appcron")}', minute=0)
-        # self.scheduler.add_job(self.cron_app, 'cron', id="catfish", minute=f'{self.config.get("app","datacron")}')
+        # self.scheduler.add_job(lambda: self.start_data_collector(reset_count=True), "cron", id="bigfish", hour=self.app_config.get("app", "datacron"), minute=0)
+        # self.scheduler.add_job(self.cron_app, "cron", id="smallfish", hour=f"*/{self.app_config.get('app', 'appcron')}", minute=0)
+        # self.scheduler.add_job(self.cron_app, "cron", id="catfish", minute=f"{self.app_config.get('app', 'datacron')}")
         # self.scheduler.start()
         # TODO 2025-04-21 reenable schedulers. disabled for debugging.
         pass
