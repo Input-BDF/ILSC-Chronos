@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from chronos.config import Config
 
 
-SUCCESS_LEVELV_NUM = 21
+SUCCESS_LEVEL_NUM = 21
 
 
 def _success_logging_function(
@@ -17,10 +17,10 @@ def _success_logging_function(
     *args,
     **kws,
 ):
-    if self.isEnabledFor(SUCCESS_LEVELV_NUM):
+    if self.isEnabledFor(SUCCESS_LEVEL_NUM):
         # Yes, logger takes its '*args' as 'args'.
         self._log(
-            SUCCESS_LEVELV_NUM,
+            SUCCESS_LEVEL_NUM,
             message,
             args,
             **kws,
@@ -29,7 +29,7 @@ def _success_logging_function(
 
 def init_logging(app_config: "Config") -> None:
     logging.addLevelName(
-        SUCCESS_LEVELV_NUM,
+        SUCCESS_LEVEL_NUM,
         "SUCCESS",
     )
     LoggerClass = logging.getLoggerClass()
@@ -58,8 +58,3 @@ def init_logging(app_config: "Config") -> None:
     handlers["info_file_handler"]["backupCount"] = int(app_config.log["backups"])
 
     logging.config.dictConfig(logging_settings)
-
-    # improve performance by disabling (currently unused) thread/process info in logs
-    # logging.logThreads = False
-    # logging.logProcesses = True
-    # logging._srcfile = None
