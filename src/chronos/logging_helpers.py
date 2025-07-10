@@ -1,11 +1,9 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
 import json
 import logging
 import logging.config
 
-if TYPE_CHECKING:
-    from chronos.config import Config
+from chronos.config import Config
 
 
 SUCCESS_LEVEL_NUM = 21
