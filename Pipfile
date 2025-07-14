@@ -7,7 +7,7 @@ name = "pypi"
 icalendar = "==4.0.9"
 caldav = ">=1.0.1"
 apscheduler = "==3.10.4"
-colorama = "==0.4.6"
+colorlog = "*"
 regex = "*"
 
 [dev-packages]
