@@ -302,10 +302,14 @@ class Config:
     def get(self, section, param):
         return getattr(self, section)[param]
 
-    def read(self, filename):
+    def read(self, filename: pl.Path):
         """
         Reads configuration file
         """
+
+        if not filename.exists():
+            raise FileNotFoundError(f"file not found: {filename}")
+
         try:
             self.parser = configparser.ConfigParser(allow_no_value=False)
             # self.files = self.parser.read(filename, encoding='utf-8')
