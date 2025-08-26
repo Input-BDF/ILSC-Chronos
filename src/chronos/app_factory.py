@@ -136,7 +136,10 @@ class AppFactory:
             # if src.last_modified > tgt.last_modified and not tgt.remote_changed:
             if src.last_modified > tgt.last_modified:
                 try:
-                    changed[eUID] = tgt.update_calDaV_event(src)
+                    updated_event = tgt.update_calDaV_event(src)
+                    changed[eUID] = updated_event
+
+                    logger.debug(f"Deleted: {updated_event.date} | {updated_event.safe_title}")
                 except Exception as ex:
                     logger.error(f"Could not update event: {ex}")
         return changed
