@@ -139,7 +139,7 @@ class AppFactory:
                     updated_event = tgt.update_calDaV_event(src)
                     changed[eUID] = updated_event
 
-                    logger.debug(f"Deleted: {updated_event.date} | {updated_event.safe_title}")
+                    logger.debug(f"Updated: {updated_event.date} | {updated_event.safe_title}")
                 except Exception as ex:
                     logger.error(f"Could not update event: {ex}")
         return changed
