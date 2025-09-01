@@ -139,7 +139,7 @@ class AppFactory:
                     updated_event = tgt.update_calDaV_event(src)
                     changed[eUID] = updated_event
 
-                    logger.debug(f"Updated: {updated_event.date} | {updated_event.safe_title}")
+                    logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
                 except Exception as ex:
                     logger.error(f"Could not update event: {ex}")
         return changed
@@ -162,7 +162,7 @@ class AppFactory:
                 if target_cal[eUID].is_chronos_origin:
                     del_event = target_cal[eUID]
                     del_event.calDAV.delete()
-                    logger.debug(f"Deleted: {del_event.date} | {del_event.safe_title}")
+                    logger.info(f"Deleted: {del_event.date} | {del_event.safe_title}")
                     deleted[eUID] = del_event
             except Exception as ex:
                 logger.error(f"Could not delete obsolete event: {ex}")
@@ -199,7 +199,7 @@ class AppFactory:
                 _cal.add_component(vevent)
                 _new = _cal.to_ical()
                 self.target.calendar.add_event(_new, no_overwrite=True, no_create=False)
-                logger.debug(f"Created: {new_event.date} | {new_event.safe_title}")
+                logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
                 new_events[eUID] = new_event
             except Exception as ex:
                 logger.error(f"Could not create new event: {ex}")
