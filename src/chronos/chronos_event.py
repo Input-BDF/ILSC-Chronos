@@ -231,8 +231,8 @@ class ChronosEvent:
             # Reduce by two days to bypass assumed day drift in Calendar selection
             out_of_range = delta > (range_max - 1)
             return out_of_range
-        except Exception as ex:
-            logger.critical(f"Could not determine day distance")
+        except Exception:
+            logger.critical("Could not determine day distance")
         return True
 
     @property
@@ -314,7 +314,7 @@ class ChronosEvent:
     def sanitize_description(self) -> icalendar.vText:
         try:
             _desc = self.description.to_ical().decode("utf-8")
-        except:
+        except Exception:
             _desc = self.description.to_ical()
         nocmt = self._rem_multline_comments(_desc)
         nocmt = self._rem_singline_comments(nocmt)
@@ -335,10 +335,10 @@ class ChronosEvent:
         new_event.add("dtend", self.date_end)
         new_event.add("summary", self.prefixed_title)
 
-        if self.source.ignore_descriptions == False and self.description:
+        if self.source.ignore_descriptions is False and self.description:
             new_event.add("description", self.sanitize_description())
 
-        if self.location == None:
+        if self.location is None:
             new_event.add("location", self.source.default_location)
         else:
             new_event.add("location", self.location)
@@ -368,13 +368,13 @@ class ChronosEvent:
             # remove description from VEVENT cause it should not be there
             self.calDAV.vobject_instance.vevent.remove(self.calDAV.vobject_instance.vevent.description)
 
-        if src_event.source.ignore_descriptions == False and src_event.description:
+        if src_event.source.ignore_descriptions is False and src_event.description:
             # add description to VEVENT
             if "description" not in self.calDAV.vobject_instance.vevent.contents.keys():
                 self.calDAV.vobject_instance.vevent.add("description")
             self.calDAV.vobject_instance.vevent.description.value = src_event.sanitize_description()
 
-        if src_event.location == None:
+        if src_event.location is None:
             self.calDAV.icalendar_component["location"] = src_event.source.default_location
         else:
             self.calDAV.icalendar_component["location"] = src_event.location

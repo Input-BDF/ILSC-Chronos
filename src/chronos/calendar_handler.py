@@ -74,7 +74,7 @@ class CalendarHandler:
 
     def config(self, conf_data):
         for key, val in conf_data.items():
-            if type(val) == dict:
+            if type(val) is dict:
                 # setattr(self, key, getattr(self, key) | val)
                 setattr(self, key, {**getattr(self, key), **val})
             else:
@@ -199,7 +199,7 @@ class CalendarHandler:
                         compfilter="VEVENT",
                         expand=True,
                     )
-                except:
+                except Exception:
                     # print("Your calendar server does apparently not support expanded search")
                     upcoming_events = calendar.date_search(start=limit_start_date, end=limit_end_date, expand=False)
                 # get all events

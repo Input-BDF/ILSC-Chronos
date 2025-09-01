@@ -122,7 +122,7 @@ class ConfigValue:
     def val(self, data):
         if isinstance(data, str) and data == "None":
             _val = None
-        elif self._datatype == str and isinstance(data, str):
+        elif self._datatype is str and isinstance(data, str):
             _val = data
         elif isinstance(data, str):
             _val = self._eval_value(data)
@@ -133,14 +133,14 @@ class ConfigValue:
         self._value = _val
 
     def apply_default(self):
-        if self.val == None:
+        if self.val is None:
             self.val = deepcopy(self._default)
 
     def reset(self):
         self._value = deepcopy(self._default)
 
     def _eval_value(self, value):
-        if self._datatype == bool:
+        if self._datatype is bool:
             _true = (1, 1.0, True, "True", "true", "yes", "y")
             _false = (
                 0,
@@ -158,7 +158,7 @@ class ConfigValue:
                 raise ValueError(f"Wrong value provided: {value} Allowed: [0, 0.0, False, false, no, n, 1, 1.0, True , true, yes, y]")
         try:
             _val = ast.literal_eval(value)
-        except:
+        except Exception:
             raise TypeError(f"Invalid raw value provided: {value}")
         if isinstance(_val, self._datatype):
             return _val
@@ -222,7 +222,7 @@ class ConfigPath:
         self._convert_paths(data)
 
     def apply_default(self):
-        if self.val == None:
+        if self.val is None:
             self.val = deepcopy(self._default)
 
 
