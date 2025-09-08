@@ -9,11 +9,11 @@ import datetime as dt
 import json
 import logging
 import time
+import zoneinfo
 
 # external libs
 from apscheduler.schedulers.background import BackgroundScheduler
 import icalendar
-import pytz
 
 # own code
 from chronos.config import Config
@@ -105,10 +105,10 @@ class AppFactory:
             logger.critical(f"Cron excecution failed. Reason {ex}")
 
     def sync_calendars(self) -> None:
-        app_timezone = pytz.timezone(self.app_config.get("app", "timezone"))
+        app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
-            c.last_check = app_timezone.localize(dt.datetime.now())
+            c.last_check = dt.datetime.now().astimezone(app_timezone)
             logger.success(f'Done comparing with "{c.cal_name}". {len(changed)} entries updated. {len(new)} entries added. {len(deleted)} entries deleted.')
 
     def sync_calendar(self, calendar: CalendarHandler) -> tuple[dict, dict, dict]:

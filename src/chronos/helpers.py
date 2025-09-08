@@ -1,7 +1,7 @@
 from logging import Logger
 import datetime as dt
+import zoneinfo
 
-import pytz
 
 from chronos.config import Config
 
@@ -11,7 +11,8 @@ def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str)
     convert to given timezone
     """
     if isinstance(date_time, dt.datetime):
-        result = pytz.timezone(time_zone).normalize(date_time)
+        tz_info = zoneinfo.ZoneInfo(time_zone)
+        result = date_time.astimezone(tz_info)
     elif isinstance(date_time, dt.date):
         result = date_time
     else:

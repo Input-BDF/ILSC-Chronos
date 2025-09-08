@@ -6,13 +6,13 @@ import datetime as dt
 import logging
 import regex
 import uuid
+import zoneinfo
 
 # external libs
 from icalendar import vDDDTypes as icalDate
 from icalendar.prop import vCategory
 import caldav
 import icalendar
-import pytz
 
 # own code
 from chronos import helpers
@@ -198,9 +198,9 @@ class ChronosEvent:
         if self.is_all_day and not (self.is_multiday) and self.source.force_time:
             try:
                 _time = dt.datetime.strptime(force_time, "%H:%M").time()
-                app_timezone = pytz.timezone(self.source.app_config.get("app", "timezone"))
+                app_timezone = zoneinfo.ZoneInfo(self.source.app_config.get("app", "timezone"))
                 combined_datetime = dt.datetime.combine(self.dt_start, _time)
-                localized_combined_datetime = app_timezone.localize(combined_datetime)
+                localized_combined_datetime = combined_datetime.astimezone(app_timezone)
                 return localized_combined_datetime
             except ValueError as ve:
                 raise ValueError(f"Incompatible time format given. Check %H:%M - {ve}")
@@ -324,8 +324,8 @@ class ChronosEvent:
     def create_ical_event(self) -> icalendar.Event:
         new_event = icalendar.Event()
 
-        app_timezone = pytz.timezone(self.source.app_config.get("app", "timezone"))
-        _now = app_timezone.localize(dt.datetime.now())
+        app_timezone = zoneinfo.ZoneInfo(self.source.app_config.get("app", "timezone"))
+        _now = dt.datetime.now().astimezone(app_timezone)
 
         # set random uuid to support getting arround nextcloud deleting problem
         new_event.add("uid", uuid.uuid1())

@@ -5,11 +5,11 @@ from urllib.request import urlretrieve
 import datetime as dt
 import logging
 import time
+import zoneinfo
 
 # external libs
 import caldav
 import icalendar
-import pytz
 
 # own code
 from chronos.config import Config
@@ -23,8 +23,8 @@ class CalendarHandler:
     def __init__(self, app_config: Config):
         self.app_config = app_config
 
-        app_timezone = pytz.timezone(self.app_config.get("app", "timezone"))
-        self.last_check = app_timezone.localize(dt.datetime.now() - dt.timedelta(days=7))
+        app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
+        self.last_check = (dt.datetime.now() - dt.timedelta(days=7)).astimezone(app_timezone)
 
         self.events_data: dict[str, ChronosEvent] = {}
 
