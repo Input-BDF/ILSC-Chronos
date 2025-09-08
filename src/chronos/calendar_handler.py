@@ -89,7 +89,10 @@ class CalendarHandler:
             self.read_from_cal_dav()
 
     def read_ics_from_url(self):
-        """read events form .ics file from a calendars primary adress"""
+        """read events from .ics file from the calendars primary adress"""
+
+        # reset data first
+        self.events_data = {}
 
         # can't open ICS file directly, so first download
         pathname_tmp = Path("./tmp")
@@ -103,10 +106,9 @@ class CalendarHandler:
             calendar_contents = f.read()
             ics_calendar = icalendar.Calendar.from_ical(calendar_contents)
 
+        # safety check for correct calendar
         if str(ics_calendar["X-WR-CALNAME"]) != self.cal_name:
             return
-
-        self.events_data = {}
 
         for event in ics_calendar.walk("VEVENT"):
             # event_summary = str(event.get("SUMMARY"))
@@ -115,7 +117,7 @@ class CalendarHandler:
             new_chronos_event = ChronosEvent(self)
             new_chronos_event._ics_event = event.copy()
 
-            # Only handle public events and those not conataining exclude tags
+            # Only handle public events and those not containing exclude tags
             if not new_chronos_event.is_confidential and not new_chronos_event.is_excluded and not new_chronos_event.date_out_of_range:
                 new_chronos_event.populate_from_vcal_object()
 
