@@ -10,6 +10,7 @@ import zoneinfo
 # external libs
 import caldav
 import icalendar
+import x_wr_timezone
 
 # own code
 from chronos.config import Config
@@ -25,6 +26,7 @@ class CalendarHandler:
 
         app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
         self.last_check = (dt.datetime.now() - dt.timedelta(days=7)).astimezone(app_timezone)
+        self.cal_timezone_info = zoneinfo.ZoneInfo("UTC")
 
         self.events_data: dict[str, ChronosEvent] = {}
 
@@ -109,6 +111,21 @@ class CalendarHandler:
         # safety check for correct calendar
         if str(ics_calendar["X-WR-CALNAME"]) != self.cal_name:
             return
+
+        # use standardized format for timezone and find timezone
+        standardized_icalendar = x_wr_timezone.to_standard(ics_calendar, add_timezone_component=True)
+        timezone_id: str | None = None
+        for subcomp in standardized_icalendar.walk("VTIMEZONE"):
+            if timezone_id is not None:
+                logger.error(f"multiple timezone instances in calendar '{self.cal_name}': '{timezone_id}' and '{subcomp.tz_name}'")
+            timezone_id = subcomp.tz_name
+        self.cal_timezone_info = zoneinfo.ZoneInfo(timezone_id)
+
+        # compare with the time zone of the target calendar
+        timezone_from_config = self.app_config.get("app", "timezone")
+        target_timezone = zoneinfo.ZoneInfo(timezone_from_config)
+        if target_timezone != self.cal_timezone_info:
+            logger.warning(f"timezone of calendar ({self.cal_timezone_info}) is not the same as the target calendars timezone ({target_timezone})")
 
         for event in ics_calendar.walk("VEVENT"):
             # event_summary = str(event.get("SUMMARY"))
