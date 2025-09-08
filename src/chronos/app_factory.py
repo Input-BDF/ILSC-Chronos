@@ -65,7 +65,7 @@ class AppFactory:
         for c in self.calendars:
             if c.sanitize_stati or c.sanitize_icons_src:
                 for _, e in c.events_data.items():
-                    if e.last_modified.astimezone(pytz.utc) > c.last_check.astimezone(pytz.utc):
+                    if e.last_modified > c.last_check:
                         save = False
                         if c.sanitize_stati:
                             save = bool(save + e.update_state_by_title())
