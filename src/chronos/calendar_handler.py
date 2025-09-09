@@ -110,6 +110,7 @@ class CalendarHandler:
 
         # safety check for correct calendar
         if str(ics_calendar["X-WR-CALNAME"]) != self.cal_name:
+            logger.error(f"mismatch of calendar name ({ics_calendar['X-WR-CALNAME']=} vs {self.cal_name=})")
             return
 
         # use standardized format for timezone and find timezone
