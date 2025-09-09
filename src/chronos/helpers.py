@@ -23,7 +23,7 @@ def convert_to_date_or_utc_datetime(
     date_or_datetime: dt.date | dt.datetime,
 ) -> dt.date | dt.datetime:
     if isinstance(date_or_datetime, dt.datetime):
-        result = date_or_datetime.astimezone(dt.UTC)
+        result = date_or_datetime.astimezone(zoneinfo.ZoneInfo("UTC"))
     elif isinstance(date_or_datetime, dt.date):
         result = date_or_datetime
     else:
