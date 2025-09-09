@@ -213,15 +213,21 @@ class CalendarHandler:
                 logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
 
                 try:
-                    upcoming_events = calendar.date_search(
+                    upcoming_events = calendar.search(
                         start=limit_start_date,
                         end=limit_end_date,
-                        compfilter="VEVENT",
+                        event=True,
                         expand=True,
                     )
                 except Exception:
                     # print("Your calendar server does apparently not support expanded search")
-                    upcoming_events = calendar.date_search(start=limit_start_date, end=limit_end_date, expand=False)
+                    upcoming_events = calendar.search(
+                        start=limit_start_date,
+                        end=limit_end_date,
+                        event=True,
+                        expand=False,
+                    )
+
                 # get all events
                 # events = calendar.events()
                 for event in upcoming_events:
