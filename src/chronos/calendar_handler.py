@@ -203,11 +203,11 @@ class CalendarHandler:
                 self.calendar = calendar
                 # TODO: Check if timezone or utc converion is needed
                 # had to add 2 hours else duplicates are created
-                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
                 range_min = self.app_config.get("calendars", "range_min")
                 limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
                 range_max = self.app_config.get("calendars", "range_max")
-                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
+                limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
 
                 logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
 
