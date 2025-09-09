@@ -6,13 +6,12 @@ import zoneinfo
 from chronos.config import Config
 
 
-def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
+def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: zoneinfo.ZoneInfo) -> dt.date | dt.datetime:
     """
     convert to given timezone
     """
     if isinstance(date_time, dt.datetime):
-        tz_info = zoneinfo.ZoneInfo(time_zone)
-        result = date_time.astimezone(tz_info)
+        result = date_time.astimezone(time_zone)
     elif isinstance(date_time, dt.date):
         result = date_time
     else:
