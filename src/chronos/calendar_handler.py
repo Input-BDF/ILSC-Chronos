@@ -141,14 +141,13 @@ class CalendarHandler:
 
                 # TODO 2025-06-11 put into helper function for date range check
                 # determine limits of time range with timezone info
-                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
                 range_min = self.app_config.get("calendars", "range_min")
                 limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
                 range_max = self.app_config.get("calendars", "range_max")
-                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
+                limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
 
                 # handle different input types (dt.date or dt.datetime) with timezone info
-                app_timezone = pytz.timezone(self.app_config.get("app", "timezone"))
                 if isinstance(new_chronos_event.dt_start, dt.datetime):
                     dt_start = new_chronos_event.dt_start
                 else:
@@ -156,7 +155,7 @@ class CalendarHandler:
                         year=new_chronos_event.dt_start.year,
                         month=new_chronos_event.dt_start.month,
                         day=new_chronos_event.dt_start.day,
-                        tzinfo=app_timezone,
+                        tzinfo=zoneinfo.ZoneInfo("UTC"),
                     )
 
                 if isinstance(new_chronos_event.dt_end, dt.datetime):
@@ -166,7 +165,7 @@ class CalendarHandler:
                         year=new_chronos_event.dt_end.year,
                         month=new_chronos_event.dt_end.month,
                         day=new_chronos_event.dt_end.day,
-                        tzinfo=app_timezone,
+                        tzinfo=zoneinfo.ZoneInfo("UTC"),
                     )
 
                 # check for limits
