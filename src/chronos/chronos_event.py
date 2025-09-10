@@ -189,35 +189,41 @@ class ChronosEvent:
     def status(self):
         return self.ical.get("status")
 
-    def _make_date(self, idate: icalDate, force_time: str):
+    def _make_date(self, date_or_datetime: dt.date | dt.datetime, force_time: str) -> dt.date | dt.datetime:
+        app_timezone = zoneinfo.ZoneInfo(self.source.app_config.get("app", "timezone"))
+
         # allday:
-        if self.is_all_day and self.is_multiday:
-            return idate
+        if self.is_all_day:
+            if self.is_multiday:
+                return date_or_datetime
 
-        # affects only 24h allday events
-        if self.is_all_day and not (self.is_multiday) and self.source.force_time:
-            try:
-                _time = dt.datetime.strptime(force_time, "%H:%M").time()
-                app_timezone = zoneinfo.ZoneInfo(self.source.app_config.get("app", "timezone"))
-                combined_datetime = dt.datetime.combine(self.dt_start, _time)
-                localized_combined_datetime = combined_datetime.astimezone(app_timezone)
-                return localized_combined_datetime
-            except ValueError as ve:
-                raise ValueError(f"Incompatible time format given. Check %H:%M - {ve}")
-            except Exception as ex:
-                logger.critical(f"Can not read calendars forced time configuration - {ex}")
-                raise
+            # affects only 24h allday events
+            if not self.is_multiday and self.source.force_time:
+                try:
+                    _time = dt.datetime.strptime(force_time, "%H:%M").time()
+                    date_or_datetime = dt.datetime.combine(self.dt_start, _time)
+                except ValueError as ve:
+                    raise ValueError(f"Incompatible time format given. Check %H:%M - {ve}")
+                except Exception as ex:
+                    logger.critical(f"Can not read calendars forced time configuration - {ex}")
+                    raise
 
-        # Pass original date
-        return idate
+        # return if pure date object
+        if isinstance(date_or_datetime, dt.date):
+            return date_or_datetime
+
+        # set into desired timezone
+        helpers.convert_to_date_or_timezone_datetime(date_or_datetime, app_timezone)
+        localized_combined_datetime = date_or_datetime.astimezone(app_timezone)
+        return localized_combined_datetime
 
     @property
-    def date_start(self):
+    def date_start(self) -> dt.date | dt.datetime:
         result = self._make_date(self.dt_start, self.source.force_start)
         return result
 
     @property
-    def date_end(self):
+    def date_end(self) -> dt.date | dt.datetime:
         result = self._make_date(self.dt_end, self.source.force_end)
         return result
 
