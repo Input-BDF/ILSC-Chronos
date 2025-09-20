@@ -209,12 +209,11 @@ class ChronosEvent:
                     raise
 
         # return if pure date object
-        if isinstance(date_or_datetime, dt.date):
+        if type(date_or_datetime) is dt.date:
             return date_or_datetime
 
         # set into desired timezone
-        helpers.convert_to_date_or_timezone_datetime(date_or_datetime, app_timezone)
-        localized_combined_datetime = date_or_datetime.astimezone(app_timezone)
+        localized_combined_datetime = helpers.convert_to_date_or_timezone_datetime(date_or_datetime, app_timezone)
         return localized_combined_datetime
 
     @property
