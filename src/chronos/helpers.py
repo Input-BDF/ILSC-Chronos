@@ -6,16 +6,15 @@ import zoneinfo
 from chronos.config import Config
 
 
-def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: zoneinfo.ZoneInfo) -> dt.date | dt.datetime:
-    """
-    convert to given timezone
-    """
-    if isinstance(date_time, dt.datetime):
-        result = date_time.astimezone(time_zone)
-    elif isinstance(date_time, dt.date):
-        result = date_time
+def convert_to_date_or_timezone_datetime(date_or_datetime: dt.date | dt.datetime, time_zone: zoneinfo.ZoneInfo) -> dt.date | dt.datetime:
+    """convert to given timezone if the type is `datetime` else leave it as date."""
+
+    if type(date_or_datetime) is dt.datetime:
+        result = date_or_datetime.astimezone(time_zone)
+    elif type(date_or_datetime) is dt.date:
+        result = date_or_datetime
     else:
-        raise ValueError(f"argument type ({type(date_time)}) not supported")
+        raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
     return result
 
 
