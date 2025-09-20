@@ -85,7 +85,7 @@ class CalendarHandler:
     def read(self) -> None:
         """read calendar events. decides if it is from a ICS file or from a CalDAV calendar."""
 
-        if ".ics" in self.cal_primary:
+        if ".ics" in self.cal_primary or "?export" in self.cal_primary:
             self.read_ics_from_url()
         else:
             self.read_from_cal_dav()
