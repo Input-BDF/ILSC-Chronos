@@ -317,10 +317,12 @@ class ChronosEvent:
         return nocmt
 
     def sanitize_description(self) -> icalendar.vText:
+        _desc = self.description.to_ical()
         try:
-            _desc = self.description.to_ical().decode("utf-8")
+            _desc = _desc.decode("utf-8")
         except Exception:
-            _desc = self.description.to_ical()
+            _desc = str(_desc)
+
         nocmt = self._rem_multline_comments(_desc)
         nocmt = self._rem_singline_comments(nocmt)
         nocmt = self._strip_newlines(nocmt)
