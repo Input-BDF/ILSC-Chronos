@@ -5,11 +5,12 @@ from urllib.request import urlretrieve
 import datetime as dt
 import logging
 import time
+import zoneinfo
 
 # external libs
 import caldav
 import icalendar
-import pytz
+import x_wr_timezone
 
 # own code
 from chronos.config import Config
@@ -23,8 +24,9 @@ class CalendarHandler:
     def __init__(self, app_config: Config):
         self.app_config = app_config
 
-        app_timezone = pytz.timezone(self.app_config.get("app", "timezone"))
-        self.last_check = app_timezone.localize(dt.datetime.now() - dt.timedelta(days=7))
+        app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
+        self.last_check = (dt.datetime.now() - dt.timedelta(days=7)).astimezone(app_timezone)
+        self.cal_timezone_info = zoneinfo.ZoneInfo("UTC")
 
         self.events_data: dict[str, ChronosEvent] = {}
 
@@ -83,13 +85,16 @@ class CalendarHandler:
     def read(self) -> None:
         """read calendar events. decides if it is from a ICS file or from a CalDAV calendar."""
 
-        if ".ics" in self.cal_primary:
+        if ".ics" in self.cal_primary or "?export" in self.cal_primary:
             self.read_ics_from_url()
         else:
             self.read_from_cal_dav()
 
     def read_ics_from_url(self):
-        """read events form .ics file from a calendars primary adress"""
+        """read events from .ics file from the calendars primary adress"""
+
+        # reset data first
+        self.events_data = {}
 
         # can't open ICS file directly, so first download
         pathname_tmp = Path("./tmp")
@@ -103,10 +108,25 @@ class CalendarHandler:
             calendar_contents = f.read()
             ics_calendar = icalendar.Calendar.from_ical(calendar_contents)
 
+        # safety check for correct calendar
         if str(ics_calendar["X-WR-CALNAME"]) != self.cal_name:
+            logger.error(f"mismatch of calendar name ({ics_calendar['X-WR-CALNAME']=} vs {self.cal_name=})")
             return
 
-        self.events_data = {}
+        # use standardized format for timezone and find timezone
+        standardized_icalendar = x_wr_timezone.to_standard(ics_calendar, add_timezone_component=True)
+        timezone_id: str | None = None
+        for subcomp in standardized_icalendar.walk("VTIMEZONE"):
+            if timezone_id is not None:
+                logger.error(f"multiple timezone instances in calendar '{self.cal_name}': '{timezone_id}' and '{subcomp.tz_name}'")
+            timezone_id = subcomp.tz_name
+        self.cal_timezone_info = zoneinfo.ZoneInfo(timezone_id)
+
+        # compare with the time zone of the target calendar
+        timezone_from_config = self.app_config.get("app", "timezone")
+        target_timezone = zoneinfo.ZoneInfo(timezone_from_config)
+        if target_timezone != self.cal_timezone_info:
+            logger.warning(f"timezone of calendar ({self.cal_timezone_info}) is not the same as the target calendars timezone ({target_timezone})")
 
         for event in ics_calendar.walk("VEVENT"):
             # event_summary = str(event.get("SUMMARY"))
@@ -115,20 +135,19 @@ class CalendarHandler:
             new_chronos_event = ChronosEvent(self)
             new_chronos_event._ics_event = event.copy()
 
-            # Only handle public events and those not conataining exclude tags
+            # Only handle public events and those not containing exclude tags
             if not new_chronos_event.is_confidential and not new_chronos_event.is_excluded and not new_chronos_event.date_out_of_range:
                 new_chronos_event.populate_from_vcal_object()
 
                 # TODO 2025-06-11 put into helper function for date range check
                 # determine limits of time range with timezone info
-                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
                 range_min = self.app_config.get("calendars", "range_min")
                 limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
                 range_max = self.app_config.get("calendars", "range_max")
-                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
+                limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
 
                 # handle different input types (dt.date or dt.datetime) with timezone info
-                app_timezone = pytz.timezone(self.app_config.get("app", "timezone"))
                 if isinstance(new_chronos_event.dt_start, dt.datetime):
                     dt_start = new_chronos_event.dt_start
                 else:
@@ -136,7 +155,7 @@ class CalendarHandler:
                         year=new_chronos_event.dt_start.year,
                         month=new_chronos_event.dt_start.month,
                         day=new_chronos_event.dt_start.day,
-                        tzinfo=app_timezone,
+                        tzinfo=zoneinfo.ZoneInfo("UTC"),
                     )
 
                 if isinstance(new_chronos_event.dt_end, dt.datetime):
@@ -146,7 +165,7 @@ class CalendarHandler:
                         year=new_chronos_event.dt_end.year,
                         month=new_chronos_event.dt_end.month,
                         day=new_chronos_event.dt_end.day,
-                        tzinfo=app_timezone,
+                        tzinfo=zoneinfo.ZoneInfo("UTC"),
                     )
 
                 # check for limits
@@ -184,24 +203,30 @@ class CalendarHandler:
                 self.calendar = calendar
                 # TODO: Check if timezone or utc converion is needed
                 # had to add 2 hours else duplicates are created
-                today_in_the_morning_utc = dt.datetime.today().replace(hour=2, minute=0, second=0, microsecond=0, tzinfo=dt.UTC)
+                today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
                 range_min = self.app_config.get("calendars", "range_min")
                 limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
                 range_max = self.app_config.get("calendars", "range_max")
-                limit_end_date = limit_start_date + dt.timedelta(days=range_max)
+                limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
 
                 logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
 
                 try:
-                    upcoming_events = calendar.date_search(
+                    upcoming_events = calendar.search(
                         start=limit_start_date,
                         end=limit_end_date,
-                        compfilter="VEVENT",
+                        event=True,
                         expand=True,
                     )
                 except Exception:
                     # print("Your calendar server does apparently not support expanded search")
-                    upcoming_events = calendar.date_search(start=limit_start_date, end=limit_end_date, expand=False)
+                    upcoming_events = calendar.search(
+                        start=limit_start_date,
+                        end=limit_end_date,
+                        event=True,
+                        expand=False,
+                    )
+
                 # get all events
                 # events = calendar.events()
                 for event in upcoming_events:

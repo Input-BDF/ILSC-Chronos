@@ -1,30 +1,31 @@
 from logging import Logger
 import datetime as dt
+import zoneinfo
 
-import pytz
 
 from chronos.config import Config
 
 
-def convert_to_date_or_timezone_datetime(date_time: dt.datetime, time_zone: str) -> dt.date | dt.datetime:
-    """
-    convert to given timezone
-    """
-    if isinstance(date_time, dt.datetime):
-        result = pytz.timezone(time_zone).normalize(date_time)
-    elif isinstance(date_time, dt.date):
-        result = date_time
+def convert_to_date_or_timezone_datetime(date_or_datetime: dt.date | dt.datetime, time_zone: zoneinfo.ZoneInfo) -> dt.date | dt.datetime:
+    """convert to given timezone if the type is `datetime` else leave it as date."""
+
+    if type(date_or_datetime) is dt.datetime:
+        result = date_or_datetime.astimezone(time_zone)
+    elif type(date_or_datetime) is dt.date:
+        result = date_or_datetime
     else:
-        raise ValueError(f"argument type ({type(date_time)}) not supported")
+        raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
     return result
 
 
 def convert_to_date_or_utc_datetime(
     date_or_datetime: dt.date | dt.datetime,
 ) -> dt.date | dt.datetime:
-    if isinstance(date_or_datetime, dt.datetime):
-        result = date_or_datetime.astimezone(dt.UTC)
-    elif isinstance(date_or_datetime, dt.date):
+    """convert to UTC timezone if the type is `datetime` else leave it as date."""
+
+    if type(date_or_datetime) is dt.datetime:
+        result = date_or_datetime.astimezone(zoneinfo.ZoneInfo("UTC"))
+    elif type(date_or_datetime) is dt.date:
         result = date_or_datetime
     else:
         raise ValueError(f"argument type ({type(date_or_datetime)}) not supported")
