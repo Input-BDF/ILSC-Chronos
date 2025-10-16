@@ -1,7 +1,6 @@
-from logging import Logger
 import datetime as dt
 import zoneinfo
-
+from logging import Logger
 
 from chronos.config import Config
 
@@ -34,8 +33,9 @@ def convert_to_date_or_utc_datetime(
 
 def enable_remote_debug(app_config: Config, logger: Logger):
     try:
-        import netifaces as ni
         from os import path as ospath
+
+        import netifaces as ni
 
         logger.debug("RemoteDebug: Initializing")
         _remote_ip = app_config.get("debug", "remote_server")
