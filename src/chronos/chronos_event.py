@@ -298,6 +298,25 @@ class ChronosEvent:
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
 
+    def _remove_html_from_description(self, text: str) -> str:
+        """remove replace HTML line breaks and remove HTML tags"""
+        # handle single line breaks
+        text = text.replace("<br>", "\\n")
+        text = text.replace("<br/>", "\\n")
+
+        # handle paragraph (the HTMLFilter will take care of the <p> tag)
+        text = text.replace("</p>", "\\n</p>")
+
+        # TODO 2025-10-17 handle links such that:
+        # 1. "<URL>" is visible if URL and text are the same
+        # 2. "<text> (<URL>)" is visible if URL differs from the text
+
+        f = helpers.HTMLFilter()
+        f.feed(text)
+
+        result = f.text
+        return result
+
     def _rem_multline_comments(self, text: str) -> str:
         """Remove multiline comments"""
         _reg = r"(?:^\s*#{3}|(?<=\\n)\s*#{3})(?:\\n)?[^#]{3}.*?(?:#{3}\\n|#{3}$)"
