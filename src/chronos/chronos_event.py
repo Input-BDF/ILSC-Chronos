@@ -34,7 +34,7 @@ class ChronosEvent:
         self.date: dt.date = None
         self.dt_start: dt.datetime = None
         self.dt_end: dt.datetime = None
-        self.description: str = None
+        self.description: icalendar.vText
         self.location: str = None
 
         self.calDAV: caldav.Event | None = None
@@ -341,7 +341,8 @@ class ChronosEvent:
         new_event.add("summary", self.prefixed_title)
 
         if self.source.ignore_descriptions is False and self.description:
-            new_event.add("description", self.sanitize_description())
+            sanitized_description = self.sanitize_description()
+            new_event.add("description", sanitized_description)
 
         if self.location is None:
             new_event.add("location", self.source.default_location)
