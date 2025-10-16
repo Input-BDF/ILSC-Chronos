@@ -1,5 +1,6 @@
 import datetime as dt
 import zoneinfo
+from html.parser import HTMLParser
 from logging import Logger
 
 from chronos.config import Config
@@ -66,3 +67,17 @@ def enable_remote_debug(app_config: Config, logger: Logger):
         logger.debug("RemoteDebug: Could not import pydevd")
     except Exception as ex:
         logger.debug(f"RemoteDebug: General Exception {ex}")
+
+
+class HTMLFilter(HTMLParser):
+    """
+    small helper class to eliminate HTML tags from a text.
+    thanks, https://stackoverflow.com/a/55825140
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.text = ""
+
+    def handle_data(self, data):
+        self.text += data
