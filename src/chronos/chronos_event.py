@@ -342,6 +342,8 @@ class ChronosEvent:
         except Exception:
             _desc = str(_desc)
 
+        _desc = self._remove_html_from_description(_desc)
+
         nocmt = self._rem_multline_comments(_desc)
         nocmt = self._rem_singline_comments(nocmt)
         nocmt = self._strip_newlines(nocmt)
