@@ -9,6 +9,7 @@ import uuid
 import zoneinfo
 
 # external libs
+from bs4 import BeautifulSoup
 from icalendar import vDDDTypes as icalDate
 from icalendar.prop import vCategory
 import caldav
@@ -307,12 +308,25 @@ class ChronosEvent:
         # handle paragraph (the HTMLFilter will take care of the <p> tag)
         text = text.replace("</p>", "\\n</p>")
 
-        # TODO 2025-10-17 handle links such that:
-        # 1. "<URL>" is visible if URL and text are the same
-        # 2. "<text> (<URL>)" is visible if URL differs from the text
+        # handle links with BeautifulSoup
+        soup = BeautifulSoup(text, "html.parser")
 
+        for data in soup(["a"]):
+            anchor_url = data.get("href")
+            anchor_text = data.string
+
+            replacement_text = anchor_url
+            if anchor_url is not anchor_text:
+                replacement_text = f"{anchor_text} ({anchor_url})"
+
+            print(replacement_text)
+            data.string = replacement_text
+
+        text_without_links = "".join(soup.stripped_strings)
+
+        # strip other tags
         f = helpers.HTMLFilter()
-        f.feed(text)
+        f.feed(text_without_links)
 
         result = f.text
         return result
