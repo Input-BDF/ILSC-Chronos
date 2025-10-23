@@ -1,7 +1,7 @@
-from logging import Logger
 import datetime as dt
 import zoneinfo
-
+from html.parser import HTMLParser
+from logging import Logger
 
 from chronos.config import Config
 
@@ -34,8 +34,9 @@ def convert_to_date_or_utc_datetime(
 
 def enable_remote_debug(app_config: Config, logger: Logger):
     try:
-        import netifaces as ni
         from os import path as ospath
+
+        import netifaces as ni
 
         logger.debug("RemoteDebug: Initializing")
         _remote_ip = app_config.get("debug", "remote_server")
@@ -66,3 +67,17 @@ def enable_remote_debug(app_config: Config, logger: Logger):
         logger.debug("RemoteDebug: Could not import pydevd")
     except Exception as ex:
         logger.debug(f"RemoteDebug: General Exception {ex}")
+
+
+class HTMLFilter(HTMLParser):
+    """
+    small helper class to eliminate HTML tags from a text.
+    thanks, https://stackoverflow.com/a/55825140
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.text = ""
+
+    def handle_data(self, data):
+        self.text += data
