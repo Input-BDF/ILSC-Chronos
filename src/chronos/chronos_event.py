@@ -299,30 +299,42 @@ class ChronosEvent:
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
 
-    def _remove_html_from_description(self, text: str) -> str:
+    def _sanitize_link_with_line_breaks(self, text_input: str) -> str:
+        # handle links with BeautifulSoup
+        soup = BeautifulSoup(text_input, "html.parser")
+
+        for data in soup(["a"]):
+            brs = data.find_all("br")
+            if len(brs) > 0:
+                pass
+
+            anchor_url = data.get("href")
+            anchor_text = data.string
+
+            replacement_text = anchor_url
+            amount_line_breaks = anchor_text.count("\\n")
+            sanitized_anchor_text = anchor_text.replace("\\n", "")
+            if anchor_url != sanitized_anchor_text:
+                replacement_text = f"{sanitized_anchor_text} ({anchor_url})"
+
+            replacement_text += " " + "\\n" * amount_line_breaks
+            print(replacement_text)
+
+            data.string = replacement_text
+
+        text_without_links = "".join(soup.stripped_strings)
+        return text_without_links
+
+    def _remove_html_from_description(self, text_input: str) -> str:
         """remove replace HTML line breaks and remove HTML tags"""
         # handle single line breaks
-        text = text.replace("<br>", "\\n")
+        text = text_input.replace("<br>", "\\n")
         text = text.replace("<br/>", "\\n")
 
         # handle paragraph (the HTMLFilter will take care of the <p> tag)
         text = text.replace("</p>", "\\n</p>")
 
-        # handle links with BeautifulSoup
-        soup = BeautifulSoup(text, "html.parser")
-
-        for data in soup(["a"]):
-            anchor_url = data.get("href")
-            anchor_text = data.string
-
-            replacement_text = anchor_url
-            if anchor_url is not anchor_text:
-                replacement_text = f"{anchor_text} ({anchor_url})"
-
-            print(replacement_text)
-            data.string = replacement_text
-
-        text_without_links = "".join(soup.stripped_strings)
+        text_without_links = self._sanitize_link_with_line_breaks(text)
 
         # strip other tags
         f = helpers.HTMLFilter()
