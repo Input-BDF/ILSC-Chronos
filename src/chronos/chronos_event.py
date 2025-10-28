@@ -312,7 +312,12 @@ class ChronosEvent:
                 pass
 
             anchor_url = data.get("href")
+            if anchor_url is None:
+                continue
+
             anchor_text = data.string
+            if anchor_text is None:
+                continue
 
             replacement_text = anchor_url
             amount_line_breaks = anchor_text.count("\\n")
@@ -323,7 +328,7 @@ class ChronosEvent:
             replacement_text += " " + "\\n" * amount_line_breaks
             print(replacement_text)
 
-            data.string = replacement_text
+            data.string = str(replacement_text)
 
         text_without_links = "".join(soup.stripped_strings)
         return text_without_links
