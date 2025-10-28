@@ -12,6 +12,7 @@ dependencies = [
     "colorlog",
     "icalendar>=6.3.1",
     "regex",
+    "vobject>=0.9.9",
     "x-wr-timezone>2",
 ]
 requires-python = "~=3.11"
