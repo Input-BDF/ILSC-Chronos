@@ -84,7 +84,10 @@ class ChronosEvent:
     def last_modified(self) -> dt.datetime:
         """return last modification date. if event never was modified the creation date is provided"""
         _mod = self.ical.get("last-modified")
-        return _mod.dt if _mod else self.ical.get("dtstamp").dt
+        result: dt.datetime = _mod.dt if _mod else self.ical.get("dtstamp").dt
+        if result.tzinfo is None:
+            result = result.astimezone(zoneinfo.ZoneInfo("UTC"))
+        return result
 
     @property
     def origin(self) -> str:
