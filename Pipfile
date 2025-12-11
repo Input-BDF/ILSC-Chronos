@@ -4,11 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-icalendar = "==4.0.9"
-caldav = ">=1.0.1"
-apscheduler = "==3.10.4"
+apscheduler = ">=3.11"
+bs = "*"
+caldav = ">=2.0.1"
 colorlog = "*"
+icalendar = ">=6.3.1"
 regex = "*"
+vobject = ">=0.9.9"
+x-wr-timezone = ">2"
 
 [dev-packages]
 netifaces = "*"
