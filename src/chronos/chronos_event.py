@@ -148,7 +148,7 @@ class ChronosEvent:
     @property
     def is_planned(self) -> bool:
         """
-        checks for ical status
+        checks for event status is "TENTATIVE"
             "TENTATIVE"           ;Indicates event is tentative.
             "CONFIRMED"           ;Indicates event is definite.
             "CANCELLED"           ;Indicates event is canceled
@@ -166,11 +166,11 @@ class ChronosEvent:
     @property
     def is_canceled(self) -> bool:
         """
-        checks for ical status
+        checks for event status is "CANCELLED"
             "TENTATIVE"           ;Indicates event is tentative.
             "CONFIRMED"           ;Indicates event is definite.
             "CANCELLED"           ;Indicates event is canceled
-            returns True if satus is TENTATIVE
+            returns True if satus is CANCELLED
         """
         return True if self.ical.get("status") == "CANCELLED" else False
 
