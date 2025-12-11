@@ -45,7 +45,7 @@ class AppFactory:
             _data = json.load(f)
         return _data["target"], _data["calendars"], _data["icons"]
 
-    def set_calendars(self, target_data: list, calendars_data: dict, icons: dict) -> None:
+    def set_calendars(self, target_data: dict, calendars_data: dict, icons: dict) -> None:
         target_data["icons"] = icons
         self.target = CalendarHandler(self.app_config)
         self.target.config(target_data)
