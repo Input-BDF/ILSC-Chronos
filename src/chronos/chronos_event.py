@@ -32,11 +32,11 @@ class ChronosEvent:
 
         self.uid = uuid.uuid1()
         self.created: dt.datetime = dt.datetime.now()
-        self.date: dt.date = None
-        self.dt_start: dt.datetime = None
-        self.dt_end: dt.datetime = None
+        self.date: dt.date
+        self.dt_start: dt.datetime
+        self.dt_end: dt.datetime
         self.description: icalendar.vText
-        self.location: str = None
+        self.location: str
 
         self.calDAV: caldav.Event | None = None
         self._ics_event: icalendar.Event | None = None
