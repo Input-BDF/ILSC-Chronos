@@ -6,8 +6,8 @@ name = "pypi"
 [packages]
 icalendar = "==4.0.9"
 caldav = ">=1.0.1"
-apscheduler = "==3.9.0.post1"
-colorama = "==0.4.4"
+apscheduler = "==3.10.4"
+colorama = "==0.4.6"
 regex = "*"
 
 [dev-packages]
@@ -16,4 +16,4 @@ pydevd = "*"
 pylint = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.11"

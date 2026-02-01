@@ -52,7 +52,6 @@ class ILSCEvent(object):
         self.dt_start = None
         self.dt_end = None
         self.description = None
-        self.categories = []
         self.location = None
         
         self.calDAV = None
@@ -112,6 +111,7 @@ class ILSCEvent(object):
     
     @property
     def prefixed_title(self) -> str:
+        '''return title prefixed with string defined in calender config'''
         if self.source.title_prefix and self.source.sanitize_icons_tgt: 
             _pre = Template(appConfig.get('calendars','prefix_format')).substitute(icons = self.icons, prefix = self.source.title_prefix).strip()
             return f"{_pre} | {self.title}"
@@ -119,6 +119,15 @@ class ILSCEvent(object):
             return f"{self.source.title_prefix} | {self.title}"
         else:
             return self.title 
+    
+    @property
+    def categories(self) -> list:
+        '''fetch categories from ical object and return as list'''
+        _cats = self.ical.get('categories')
+        if _cats:
+            _cats = _cats.to_ical().decode().split(',')
+            return _cats
+        return []
     
     @property
     def is_all_day(self):
@@ -175,6 +184,13 @@ class ILSCEvent(object):
         return confidential
     
     @property
+    def is_excluded(self) -> bool:
+        setEventCats = set(map(lambda x:x.lower(), self.categories))
+        setExclude = set(map(lambda x:x.lower(), self.source.tags_excluded))
+        do_exclude = not(setExclude.isdisjoint(setEventCats))
+        return do_exclude
+    
+    @property
     def status(self):
         return self.ical.get('status')
     
@@ -204,6 +220,18 @@ class ILSCEvent(object):
         return self._make_date(self.dt_end, self.source.force_end)
     
     @property
+    def date_out_of_range(self) -> bool:
+        try:
+            target = self._get_ical_start_date()
+            today = dt.date.today()
+            delta = (target - today).days
+            out_of_range = delta > ( RANGE_MAX - 1 )  # Reduce by two days to bypass assumed day drift in Calendar selection
+            return out_of_range 
+        except Exception as ex:
+            logger.critical(f'Could not determine day distance')
+        return True
+    
+    @property
     def md5_string(self):
         return f'{self.date}_{self.safe_title}_{self.description}'.encode('utf-8')
     
@@ -218,26 +246,30 @@ class ILSCEvent(object):
             return self.source_uid.encode('utf-8')
         return f'{self.uid}'.encode('utf-8')
 
-    def populate_from_vcal_object(self, event_object: caldav.Event):
+    def populate_from_vcal_object(self):
         #TODO: enshure uid exists (at least it should )
         try:
-            self.uid = str(event_object.get('uid'))
-            if self.is_confidential:
-                logger.warning(f"Skipping further ical parsing on confidential event: {self.uid} | Source: {self.source.cal_name}")
+            self.uid = str(self.ical.get('uid'))
+            if self.is_confidential or self.is_excluded:
+                logger.info(f"Skipping further ical parsing on confidential or excluded event: {self.uid} | Source: {self.source.cal_name}")
                 return
-            self.created = event_object.get('dtstamp').dt
-            self.dt_start = set_tz(event_object.get('dtstart').dt, self.source.time_zone)
-            self.dt_end = set_tz(event_object.get('dtend').dt, self.source.time_zone)
-
-            self.date = event_object.get('dtstart').dt
-            if isinstance(self.date, datetime):
-                self.date = self.date.date()
-            self.description = event_object.get('description')
-            self.location = event_object.get('location')
-            self.categories = self._parse_categories(event_object)
+            self.created = self.ical.get('dtstamp').dt
+            self.dt_start = set_tz(self.ical.get('dtstart').dt, self.source.time_zone)
+            self.dt_end = set_tz(self.ical.get('dtend').dt, self.source.time_zone)
+            
+            self.date = self._get_ical_start_date()
+            
+            self.description = self.ical.get('description')
+            self.location = self.ical.get('location')
         except Exception as ex:
             logger.error(f"Could not process Event UID: {self.uid} | Source: {self.source.cal_name} | Reason: - {ex}")
             raise ex
+
+    def _get_ical_start_date(self):
+        _date = self.ical.get('dtstart').dt
+        if isinstance(_date, datetime):
+            return _date.date()
+        return _date
 
     def _clear_title(self, title: vText) -> str:
         '''
@@ -248,13 +280,6 @@ class ILSCEvent(object):
         if title:
             return regex.sub(r"^([^\|]*\|)", "", title.to_ical().decode(), count=0, flags=0).strip()
         return 'N/A'
-    
-    def _parse_categories(self, event: icalEvent) -> list:
-        _cats = event.get('categories')
-        if _cats:
-            _cats = _cats.to_ical().decode().split(',')
-            return _cats
-        return []
     
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
@@ -346,7 +371,7 @@ class ILSCEvent(object):
         self.calDAV.icalendar_component['last-modified'] = icalDate(datetime.now())
         
         self.calDAV.icalendar_component['status'] = src_event.status
-        if ( src_event.source.ignore_planned and src_event.is_planned ) or src_event.is_confidential:
+        if ( src_event.source.ignore_planned and src_event.is_planned ) or src_event.is_confidential or src_event.is_excluded:
             #DELETE rather than save
             self.calDAV.delete()
             logger.success(f'Deleted {self.date} | {self.safe_title} out of the row in "{src_event.source.cal_name}".')
@@ -435,6 +460,8 @@ class CalendarHandler(object):
         self.color = None
         self.default_location = None
         
+        self.tags_excluded = []
+        
         self.sanitize = {
                 "stati" : True,
                 "source_icons" : True,
@@ -513,15 +540,18 @@ class CalendarHandler(object):
 
     def available_calendars(self):
         cals = self.principal.calendars()
-        logger.info(f'Available calendars on {self.cal_name}:')
+        logger.info(f'Fetching available calendars on: {self.cal_name}')
+        logger.debug('Found:')
         for cal in cals:
-            logger.info(f'\t{cal.name}')
+            logger.debug(f'\t{cal.name}')
         return cals
     
     def read_event(self, calEvent: caldav.Event):
         '''read event data'''
+        #TODO: Clean this mess. As there should only be one vevent component. at least if caldav filter is working
         cal = Calendar.from_ical(calEvent.data)
         components = cal.walk('vevent')
+        #logger.debug(f'Nr of vevent components {len(components)}')
         for component in components:
             if component.name == "VEVENT":
                 '''
@@ -534,9 +564,9 @@ class CalendarHandler(object):
                 '''
                 event = ILSCEvent(self)
                 event.calDAV = calEvent
-                #Only handle public events
-                if not event.is_confidential:
-                    event.populate_from_vcal_object(component)
+                #Only handle public events and those not conataining exclude tags
+                if not event.is_confidential and not event.is_excluded and not event.date_out_of_range:
+                    event.populate_from_vcal_object()
                     self.events_data[event.key] = event
     
     def search_events_by_tags(self, tags:list) -> dict:
@@ -634,9 +664,19 @@ class AppFactory:
             logger.debug('Cleaning up')
             self.sync_calendars()
             logger.debug('--== All done for this run ==--')
+            self.close_calendars()
+            logger.debug('Closed sockets to calendars')
         except Exception as ex:
             logger.critical(f'Cron excecution failed. Reason {ex}')
-    
+
+    def close_calendars(self):
+        try:
+            self.target.client.close()
+            for c in self.calendars:
+                c.client.close()
+        except Exception as ex:
+            logger.critical(f'Closing sockets failed. Reason: {ex}')
+
     def sync_calendars(self):
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
@@ -707,6 +747,9 @@ class AppFactory:
                 continue
             if new_event.is_confidential:
                 logger.debug(f'Ignoring confidential event: {new_event.date}')
+                continue
+            if new_event.is_excluded:
+                logger.debug(f'Ignoring event excluded by tag: {new_event.date}')
                 continue
             if ( calendar.ignore_planned and new_event.is_planned ) or new_event.is_canceled:
                 logger.debug(f'Ignoring {new_event.status} event: {new_event.date} | {new_event.safe_title}')
