@@ -130,6 +130,15 @@ dmypy.json
 /.settings
 /.pydevproject
 /.project
+
+# development
 /src/config/app.cfg
 /src/config/calendars.json
 /src/logs/*.log_debug
+
+config/
+logs/
+tmp/
+
+# TT
+.vscode/

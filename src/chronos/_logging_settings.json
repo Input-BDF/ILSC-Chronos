@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "default": {
+      "format": "[%(asctime)s][%(name)-30s] %(levelname)8s:  %(message)s",
+      "datefmt": "%Y-%m-%d %H:%M:%S%z"
+    },
+    "default_colored": {
+      "()": "colorlog.ColoredFormatter",
+      "log_colors": {
+        "DEBUG": "thin_white",
+        "INFO": "white",
+        "SUCCESS": "green",
+        "WARNING": "yellow",
+        "ERROR": "red",
+        "CRITICAL": "red,bg_white"
+      },
+      "format": "%(log_color)s[%(asctime)s][%(name)-30s%(filename)20s:%(lineno)4d] %(levelname)8s:  %(message)s",
+      "datefmt": "%Y-%m-%d %H:%M:%S%z"
+    }
+  },
+  "handlers": {
+    "console_stdout": {
+      "class": "logging.StreamHandler",
+      "level": "DEBUG",
+      "formatter": "default_colored",
+      "stream": "ext://sys.stdout"
+    },
+    "info_file_handler": {
+      "class": "logging.handlers.TimedRotatingFileHandler",
+      "level": "DEBUG",
+      "formatter": "default",
+      "filename": "",
+      "encoding": "utf8"
+    }
+  },
+  "root": {
+    "level": "DEBUG",
+    "handlers": [
+      "console_stdout",
+      "info_file_handler"
+    ]
+  }
+}
