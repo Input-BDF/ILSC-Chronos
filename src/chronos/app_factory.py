@@ -29,7 +29,7 @@ class AppFactory:
         self.scheduler = BackgroundScheduler({"apscheduler.timezone": self.app_config.get("app", "timezone")})
 
         self.calendars: list[CalendarHandler] = []
-        self.target = None
+        self.target: CalendarHandler
 
         self.active = False
 
