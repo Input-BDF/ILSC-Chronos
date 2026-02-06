@@ -132,48 +132,51 @@ class CalendarHandler:
             new_chronos_event._ics_event = event.copy()
 
             # Only handle public events and those not containing exclude tags
-            if not new_chronos_event.is_confidential and not new_chronos_event.is_excluded and not new_chronos_event.date_out_of_range:
-                new_chronos_event.populate_from_vcal_object()
+            is_viable_event = not new_chronos_event.is_confidential and not new_chronos_event.is_excluded and not new_chronos_event.date_out_of_range
+            if not is_viable_event:
+                continue
 
-                # TODO 2025-06-11 put into helper function for date range check
-                # determine limits of time range with timezone info
-                today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
-                range_min = self.app_config.get("calendars", "range_min")
-                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
-                range_max = self.app_config.get("calendars", "range_max")
-                limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
+            new_chronos_event.populate_from_vcal_object()
 
-                # handle different input types (dt.date or dt.datetime) with timezone info
-                if isinstance(new_chronos_event.dt_start, dt.datetime):
-                    dt_start = new_chronos_event.dt_start
-                else:
-                    dt_start = dt.datetime(
-                        year=new_chronos_event.dt_start.year,
-                        month=new_chronos_event.dt_start.month,
-                        day=new_chronos_event.dt_start.day,
-                        tzinfo=zoneinfo.ZoneInfo("UTC"),
-                    )
+            # TODO 2025-06-11 put into helper function for date range check
+            # determine limits of time range with timezone info
+            today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
+            range_min = self.app_config.get("calendars", "range_min")
+            limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
+            range_max = self.app_config.get("calendars", "range_max")
+            limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
 
-                if isinstance(new_chronos_event.dt_end, dt.datetime):
-                    dt_end = new_chronos_event.dt_end
-                else:
-                    dt_end = dt.datetime(
-                        year=new_chronos_event.dt_end.year,
-                        month=new_chronos_event.dt_end.month,
-                        day=new_chronos_event.dt_end.day,
-                        tzinfo=zoneinfo.ZoneInfo("UTC"),
-                    )
+            # handle different input types (dt.date or dt.datetime) with timezone info
+            if isinstance(new_chronos_event.dt_start, dt.datetime):
+                dt_start = new_chronos_event.dt_start
+            else:
+                dt_start = dt.datetime(
+                    year=new_chronos_event.dt_start.year,
+                    month=new_chronos_event.dt_start.month,
+                    day=new_chronos_event.dt_start.day,
+                    tzinfo=zoneinfo.ZoneInfo("UTC"),
+                )
 
-                # check for limits
-                if dt_start < limit_start_date:
-                    # print("event is in the past")
-                    continue
+            if isinstance(new_chronos_event.dt_end, dt.datetime):
+                dt_end = new_chronos_event.dt_end
+            else:
+                dt_end = dt.datetime(
+                    year=new_chronos_event.dt_end.year,
+                    month=new_chronos_event.dt_end.month,
+                    day=new_chronos_event.dt_end.day,
+                    tzinfo=zoneinfo.ZoneInfo("UTC"),
+                )
 
-                if dt_end > limit_end_date:
-                    # print("event is in the far future")
-                    continue
+            # check for limits
+            if dt_start < limit_start_date:
+                # print("event is in the past")
+                continue
 
-                self.events_data[new_chronos_event.key] = new_chronos_event
+            if dt_end > limit_end_date:
+                # print("event is in the far future")
+                continue
+
+            self.events_data[new_chronos_event.key] = new_chronos_event
 
     def read_from_cal_dav(self) -> None:
         """read events from caldav calendar"""
