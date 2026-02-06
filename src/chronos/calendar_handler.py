@@ -77,7 +77,6 @@ class CalendarHandler:
     def config(self, conf_data):
         for key, val in conf_data.items():
             if type(val) is dict:
-                # setattr(self, key, getattr(self, key) | val)
                 setattr(self, key, {**getattr(self, key), **val})
             else:
                 setattr(self, key, val)
@@ -129,9 +128,6 @@ class CalendarHandler:
             logger.warning(f"timezone of calendar ({self.cal_timezone_info}) is not the same as the target calendars timezone ({target_timezone})")
 
         for event in ics_calendar.walk("VEVENT"):
-            # event_summary = str(event.get("SUMMARY"))
-            # print(f"{event_summary=}")
-
             new_chronos_event = ChronosEvent(self)
             new_chronos_event._ics_event = event.copy()
 
@@ -228,7 +224,6 @@ class CalendarHandler:
                     )
 
                 # get all events
-                # events = calendar.events()
                 for event in upcoming_events:
                     if event.data:
                         try:

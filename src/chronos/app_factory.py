@@ -91,7 +91,6 @@ class AppFactory:
         self.cron_app()
         while self.active:
             time.sleep(60)
-            # continue
 
     def stop(self) -> None:
         self.active = False
@@ -142,7 +141,6 @@ class AppFactory:
         """Update target calendar events"""
 
         source_cal = calendar.events_data
-        # target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         changeSet = set(target_cal).intersection(set(source_cal))
         changed = {}
@@ -171,7 +169,6 @@ class AppFactory:
             return {}
 
         source_cal = calendar.events_data
-        # target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         deleteSet = set(target_cal).difference(set(source_cal))
         deleted = {}
@@ -191,7 +188,6 @@ class AppFactory:
     def _create_target_events(self, calendar: CalendarHandler) -> dict:
         """create iCal events only in source calendar"""
         source_cal = calendar.events_data
-        # target_cal = self.target.search_events_by_tags(calendar.tags)
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
         new_events: dict[icalendar.vText, ChronosEvent] = {}
