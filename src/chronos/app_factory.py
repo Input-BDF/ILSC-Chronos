@@ -81,8 +81,8 @@ class AppFactory:
                     logger.debug(f"Updated source event: {event.date} | {event.safe_title}")
 
     def init_schedulers(self) -> None:
-        appcron_value = f"*/{self.app_config.get('app', 'appcron')}"
-        self.scheduler.add_job(self.single_run, "cron", id="smallfish", hour=appcron_value, minute=0)
+        # appcron_value = f"*/{self.app_config.get('app', 'appcron')}"
+        # self.scheduler.add_job(self.single_run, "cron", id="smallfish", hour=appcron_value, minute=0)
 
         datacron_value = str(self.app_config.get("app", "datacron"))
         self.scheduler.add_job(self.single_run, "cron", id="catfish", minute=datacron_value)
