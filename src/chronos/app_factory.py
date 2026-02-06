@@ -160,6 +160,7 @@ class AppFactory:
                     logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
                 except Exception as ex:
                     logger.error(f"Could not update event: {ex}")
+
         return changed
 
     def _delete_target_events(self, calendar: CalendarHandler) -> dict:
@@ -184,6 +185,7 @@ class AppFactory:
                     deleted[event_id] = del_event
             except Exception as ex:
                 logger.error(f"Could not delete obsolete event: {ex}")
+
         return deleted
 
     def _create_target_events(self, calendar: CalendarHandler) -> dict:
@@ -223,4 +225,5 @@ class AppFactory:
                 logger.error(f"Could not create new event: {ex}")
                 if new_event is not None and hasattr(new_event, "title") and hasattr(new_event, "date"):
                     logger.error(f"Affected event: {new_event.safe_title} {new_event.date}")
+
         return new_events

@@ -235,6 +235,7 @@ class CalendarHandler:
                             self.read_event(event)
                         except Exception as ex:
                             logger.error(f"Error reading event: {ex}")
+
         # uncomment as helper to check fetched events sorted by sektion and dates
         # dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
         logger.debug("Time needed: {:.2f}s".format(time.time() - start))
@@ -246,8 +247,10 @@ class CalendarHandler:
         calendars = self.principal.calendars()
         logger.info(f"Fetching available calendars on: {self.cal_name}")
         logger.debug("Found:")
+
         for calendar in calendars:
             logger.debug(f"\t{calendar.name}")
+
         return calendars
 
     def read_event(self, calEvent: caldav.Event) -> None:
@@ -290,6 +293,7 @@ class CalendarHandler:
         for key, event in self.events_data.items():
             if calid == event.cal_id and event.is_chronos_origin:
                 found[key] = event
+
         return found
 
     def close_connection(self) -> None:
