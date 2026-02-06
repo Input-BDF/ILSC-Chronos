@@ -195,41 +195,43 @@ class CalendarHandler:
         logger.debug("Reading Events")
         list_available_calendars = self.available_calendars()
         for calendar in list_available_calendars:
-            if calendar and calendar.name == self.cal_name:
-                self.calendar = calendar
-                # TODO: Check if timezone or utc converion is needed
-                # had to add 2 hours else duplicates are created
-                today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
-                range_min = self.app_config.get("calendars", "range_min")
-                limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
-                range_max = self.app_config.get("calendars", "range_max")
-                limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
+            if calendar.name != self.cal_name:
+                continue
 
-                logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
+            self.calendar = calendar
+            # TODO: Check if timezone or utc converion is needed
+            # had to add 2 hours else duplicates are created
+            today_in_the_morning_utc = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=zoneinfo.ZoneInfo("UTC"))
+            range_min = self.app_config.get("calendars", "range_min")
+            limit_start_date = today_in_the_morning_utc + dt.timedelta(days=range_min)
+            range_max = self.app_config.get("calendars", "range_max")
+            limit_end_date = today_in_the_morning_utc + dt.timedelta(days=range_max)
 
-                try:
-                    upcoming_events = calendar.search(
-                        start=limit_start_date,
-                        end=limit_end_date,
-                        event=True,
-                        expand=True,
-                    )
-                except Exception:
-                    # print("Your calendar server does apparently not support expanded search")
-                    upcoming_events = calendar.search(
-                        start=limit_start_date,
-                        end=limit_end_date,
-                        event=True,
-                        expand=False,
-                    )
+            logger.debug(f'Checking calendar "{self.cal_name}" for dates in range: {limit_start_date} to {limit_end_date}')
 
-                # get all events
-                for event in upcoming_events:
-                    if event.data:
-                        try:
-                            self.read_event(event)
-                        except Exception as ex:
-                            logger.error(f"Error reading event: {ex}")
+            try:
+                upcoming_events = calendar.search(
+                    start=limit_start_date,
+                    end=limit_end_date,
+                    event=True,
+                    expand=True,
+                )
+            except Exception:
+                # print("Your calendar server does apparently not support expanded search")
+                upcoming_events = calendar.search(
+                    start=limit_start_date,
+                    end=limit_end_date,
+                    event=True,
+                    expand=False,
+                )
+
+            # get all events
+            for event in upcoming_events:
+                if event.data:
+                    try:
+                        self.read_event(event)
+                    except Exception as ex:
+                        logger.error(f"Error reading event: {ex}")
 
         # uncomment as helper to check fetched events sorted by sektion and dates
         # dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
