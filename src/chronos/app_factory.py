@@ -82,24 +82,24 @@ class AppFactory:
 
     def init_schedulers(self) -> None:
         appcron_value = f"*/{self.app_config.get('app', 'appcron')}"
-        self.scheduler.add_job(self.cron_app, "cron", id="smallfish", hour=appcron_value, minute=0)
+        self.scheduler.add_job(self.single_run, "cron", id="smallfish", hour=appcron_value, minute=0)
 
         datacron_value = str(self.app_config.get("app", "datacron"))
-        self.scheduler.add_job(self.cron_app, "cron", id="catfish", minute=datacron_value)
+        self.scheduler.add_job(self.single_run, "cron", id="catfish", minute=datacron_value)
 
         self.scheduler.start()
         pass
 
     def run(self) -> None:
         self.active = True
-        self.cron_app()
+        self.single_run()
         while self.active:
             time.sleep(60)
 
     def stop(self) -> None:
         self.active = False
 
-    def cron_app(self) -> None:
+    def single_run(self) -> None:
         try:
             self.read_calendars()
             logger.debug("Done parsing source calendars")
