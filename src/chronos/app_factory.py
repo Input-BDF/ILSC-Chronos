@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 class AppFactory:
     def __init__(self, app_config: Config):
         self.app_config = app_config
-        self.scheduler = BackgroundScheduler({"apscheduler.timezone": self.app_config.get("app", "timezone")})
+        target_calendar_timezone = self.app_config.get("app", "timezone")
+        self.scheduler = BackgroundScheduler({"apscheduler.timezone": target_calendar_timezone})
 
         self.calendars: list[CalendarHandler] = []
         self.target: CalendarHandler
@@ -76,8 +77,11 @@ class AppFactory:
                             logger.debug(f"Updated source event: {e.date} | {e.safe_title}")
 
     def init_schedulers(self) -> None:
-        # self.scheduler.add_job(self.cron_app, "cron", id="smallfish", hour=f"*/{self.app_config.get('app', 'appcron')}", minute=0)
-        self.scheduler.add_job(self.cron_app, "cron", id="catfish", minute=f"{self.app_config.get('app', 'datacron')}")
+        appcron_value = f"*/{self.app_config.get('app', 'appcron')}"
+        self.scheduler.add_job(self.cron_app, "cron", id="smallfish", hour=appcron_value, minute=0)
+
+        datacron_value = str(self.app_config.get("app", "datacron"))
+        self.scheduler.add_job(self.cron_app, "cron", id="catfish", minute=datacron_value)
 
         self.scheduler.start()
         pass
@@ -118,7 +122,12 @@ class AppFactory:
         for c in self.calendars:
             changed, deleted, new = self.sync_calendar(c)
             c.last_check = dt.datetime.now().astimezone(app_timezone)
-            logger.success(f'Done comparing with "{c.cal_name}". {len(changed)} entries updated. {len(new)} entries added. {len(deleted)} entries deleted.')
+
+            msg = f'Done comparing with "{c.cal_name}". '
+            msg += f"{len(changed)} entries updated. "
+            msg += f"{len(new)} entries added. "
+            msg += f"{len(deleted)} entries deleted."
+            logger.success(msg)
 
     def sync_calendar(self, calendar: CalendarHandler) -> tuple[dict, dict, dict]:
         # Update target calendar events from source calendar
