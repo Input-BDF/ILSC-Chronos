@@ -243,12 +243,12 @@ class CalendarHandler:
             raise ValueError(f"read_from_cal_dav: target calendar '{self.cal_name}' was not found!")
 
     def available_calendars(self) -> list[caldav.Calendar]:
-        cals = self.principal.calendars()
+        calendars = self.principal.calendars()
         logger.info(f"Fetching available calendars on: {self.cal_name}")
         logger.debug("Found:")
-        for cal in cals:
-            logger.debug(f"\t{cal.name}")
-        return cals
+        for calendar in calendars:
+            logger.debug(f"\t{calendar.name}")
+        return calendars
 
     def read_event(self, calEvent: caldav.Event) -> None:
         """read event data"""

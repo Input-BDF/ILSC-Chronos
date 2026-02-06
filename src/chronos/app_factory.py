@@ -59,22 +59,22 @@ class AppFactory:
 
     def read_calendars(self) -> None:
         self.target.read()
-        for c in self.calendars:
-            c.read()
+        for calendar in self.calendars:
+            calendar.read()
 
     def sanitize_events(self) -> None:
-        for c in self.calendars:
-            if c.sanitize_stati or c.sanitize_icons_src:
-                for _, e in c.events_data.items():
-                    if e.last_modified > c.last_check:
-                        save = False
-                        if c.sanitize_stati:
-                            save = bool(save + e.update_state_by_title())
-                        if c.sanitize_icons_src:
-                            save = bool(save + e.set_title_icons())
-                        if save:
-                            e.save()
-                            logger.debug(f"Updated source event: {e.date} | {e.safe_title}")
+        for calendar in self.calendars:
+            if calendar.sanitize_stati or calendar.sanitize_icons_src:
+                for event in calendar.events_data.values():
+                    if event.last_modified > calendar.last_check:
+                        do_save = False
+                        if calendar.sanitize_stati:
+                            do_save = bool(do_save + event.update_state_by_title())
+                        if calendar.sanitize_icons_src:
+                            do_save = bool(do_save + event.set_title_icons())
+                        if do_save:
+                            event.save()
+                            logger.debug(f"Updated source event: {event.date} | {event.safe_title}")
 
     def init_schedulers(self) -> None:
         appcron_value = f"*/{self.app_config.get('app', 'appcron')}"
@@ -112,18 +112,18 @@ class AppFactory:
     def close_calendars(self):
         try:
             self.target.close_connection()
-            for c in self.calendars:
-                c.close_connection()
+            for calendar in self.calendars:
+                calendar.close_connection()
         except Exception as ex:
             logger.critical(f"Closing sockets failed. Reason: {ex}")
 
     def sync_calendars(self) -> None:
         app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
-        for c in self.calendars:
-            changed, deleted, new = self.sync_calendar(c)
-            c.last_check = dt.datetime.now().astimezone(app_timezone)
+        for calendar in self.calendars:
+            changed, deleted, new = self.sync_calendar(calendar)
+            calendar.last_check = dt.datetime.now().astimezone(app_timezone)
 
-            msg = f'Done comparing with "{c.cal_name}". '
+            msg = f'Done comparing with "{calendar.cal_name}". '
             msg += f"{len(changed)} entries updated. "
             msg += f"{len(new)} entries added. "
             msg += f"{len(deleted)} entries deleted."
@@ -147,15 +147,15 @@ class AppFactory:
         changeSet = set(target_cal).intersection(set(source_cal))
         changed = {}
 
-        for eUID in changeSet:
-            tgt = target_cal[eUID]
-            src = source_cal[eUID]
+        for event_id in changeSet:
+            tgt = target_cal[event_id]
+            src = source_cal[event_id]
             # TODO: (Re)Implement respect remote changes
             # if src.last_modified > tgt.last_modified and not tgt.remote_changed:
             if src.last_modified > tgt.last_modified:
                 try:
                     updated_event = tgt.update_calDaV_event(src)
-                    changed[eUID] = updated_event
+                    changed[event_id] = updated_event
 
                     logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
                 except Exception as ex:
@@ -175,13 +175,13 @@ class AppFactory:
         deleteSet = set(target_cal).difference(set(source_cal))
         deleted = {}
 
-        for eUID in deleteSet:
+        for event_id in deleteSet:
             try:
-                if target_cal[eUID].is_chronos_origin:
-                    del_event = target_cal[eUID]
+                if target_cal[event_id].is_chronos_origin:
+                    del_event = target_cal[event_id]
                     del_event.calDAV.delete()
                     logger.info(f"Deleted: {del_event.date} | {del_event.safe_title}")
-                    deleted[eUID] = del_event
+                    deleted[event_id] = del_event
             except Exception as ex:
                 logger.error(f"Could not delete obsolete event: {ex}")
         return deleted
@@ -194,8 +194,8 @@ class AppFactory:
         newSet = set(source_cal).difference(set(target_cal))
         new_events: dict[icalendar.vText, ChronosEvent] = {}
 
-        for eUID in newSet:
-            new_event = source_cal[eUID]
+        for event_id in newSet:
+            new_event = source_cal[event_id]
             if not (new_event.has_title):
                 logger.debug(f"Ignoring event without title: {new_event.date}")
                 continue
@@ -218,7 +218,7 @@ class AppFactory:
                 _new = _cal.to_ical()
                 self.target.calendar.add_event(_new, no_overwrite=True, no_create=False)
                 logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
-                new_events[eUID] = new_event
+                new_events[event_id] = new_event
             except Exception as ex:
                 logger.error(f"Could not create new event: {ex}")
                 if new_event is not None and hasattr(new_event, "title") and hasattr(new_event, "date"):

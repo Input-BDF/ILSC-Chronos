@@ -474,8 +474,8 @@ class ChronosEvent:
         icons = set(self.categories).intersection(set(self.source.icons))
         icon_str = ""
         if icons:
-            for i in icons:
-                icon_str += self.source.icons[i]
+            for icon in icons:
+                icon_str += self.source.icons[icon]
         return icon_str
 
     def update_state_by_title(self):
