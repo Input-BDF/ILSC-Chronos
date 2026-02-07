@@ -3,6 +3,8 @@ import zoneinfo
 from html.parser import HTMLParser
 from logging import Logger
 
+from bs4 import BeautifulSoup
+
 from chronos.config import Config
 
 
@@ -81,3 +83,35 @@ class HTMLFilter(HTMLParser):
 
     def handle_data(self, data):
         self.text += data
+
+
+def sanitize_link_with_line_breaks(text_input: str) -> str:
+    # handle links with BeautifulSoup
+    soup = BeautifulSoup(text_input, "html.parser")
+
+    for data in soup(["a"]):
+        brs = data.find_all("br")
+        if len(brs) > 0:
+            pass
+
+        anchor_url = data.get("href")
+        if anchor_url is None:
+            continue
+
+        anchor_text = data.string
+        if anchor_text is None:
+            continue
+
+        replacement_text = anchor_url
+        amount_line_breaks = anchor_text.count("\\n")
+        sanitized_anchor_text = anchor_text.replace("\\n", "")
+        if anchor_url != sanitized_anchor_text:
+            replacement_text = f"{sanitized_anchor_text} ({anchor_url})"
+
+        replacement_text += " " + "\\n" * amount_line_breaks
+        print(replacement_text)
+
+        data.string = str(replacement_text)
+
+    text_without_links = "".join(soup.stripped_strings)
+    return text_without_links
