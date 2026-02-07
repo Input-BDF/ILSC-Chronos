@@ -301,24 +301,6 @@ class ChronosEvent:
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
 
-    def _remove_html_from_description(self, text_input: str) -> str:
-        """remove replace HTML line breaks and remove HTML tags"""
-        # handle single line breaks
-        text = text_input.replace("<br>", "\\n")
-        text = text.replace("<br/>", "\\n")
-
-        # handle paragraph (the HTMLFilter will take care of the <p> tag)
-        text = text.replace("</p>", "\\n</p>")
-
-        text_without_links = helpers.sanitize_link_with_line_breaks(text)
-
-        # strip other tags
-        f = helpers.HTMLFilter()
-        f.feed(text_without_links)
-
-        result = f.text
-        return result
-
     def _rem_multline_comments(self, text: str) -> str:
         """Remove multiline comments"""
         _reg = r"(?:^\s*#{3}|(?<=\\n)\s*#{3})(?:\\n)?[^#]{3}.*?(?:#{3}\\n|#{3}$)"
@@ -344,7 +326,7 @@ class ChronosEvent:
         except Exception:
             _desc = str(_desc)
 
-        _desc = self._remove_html_from_description(_desc)
+        _desc = helpers.remove_html_from_description(_desc)
 
         nocmt = self._rem_multline_comments(_desc)
         nocmt = self._rem_singline_comments(nocmt)

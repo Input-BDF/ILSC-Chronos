@@ -115,3 +115,22 @@ def sanitize_link_with_line_breaks(text_input: str) -> str:
 
     text_without_links = "".join(soup.stripped_strings)
     return text_without_links
+
+
+def remove_html_from_description(text_input: str) -> str:
+    """remove replace HTML line breaks and remove HTML tags"""
+    # handle single line breaks
+    text = text_input.replace("<br>", "\\n")
+    text = text.replace("<br/>", "\\n")
+
+    # handle paragraph (the HTMLFilter will take care of the <p> tag)
+    text = text.replace("</p>", "\\n</p>")
+
+    text_without_links = sanitize_link_with_line_breaks(text)
+
+    # strip other tags
+    f = HTMLFilter()
+    f.feed(text_without_links)
+
+    result = f.text
+    return result
