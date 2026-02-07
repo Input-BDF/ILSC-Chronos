@@ -39,8 +39,8 @@ class ConfigSection:
     def __init__(self, *params):
         self.params = OrderedDict()
         if params:
-            for p in params:
-                self.params[p.name] = p
+            for param in params:
+                self.params[param.name] = param
 
     def __getitem__(self, key):
         if key not in self.params.keys():
@@ -336,14 +336,14 @@ class Config:
 
     def apply_defaults(self):
         for section in self.sections:
-            for v in getattr(self, section).values():
-                v.apply_default()
+            for value in getattr(self, section).values():
+                value.apply_default()
 
     def write_file(self):
         for section in self.sections:
             self._write(section, getattr(self, section))
-            for v in getattr(self, section).values():
-                v.apply_default()
+            for value in getattr(self, section).values():
+                value.apply_default()
 
     def _configure_file_paths(self):
         calendar_filename = self.get("calendars", "path").joinpath(self.get("calendars", "filename"))

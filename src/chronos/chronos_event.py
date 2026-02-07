@@ -9,7 +9,6 @@ import uuid
 import zoneinfo
 
 # external libs
-from bs4 import BeautifulSoup
 from icalendar import vDDDTypes as icalDate
 from icalendar.prop import vCategory
 import caldav
@@ -302,55 +301,6 @@ class ChronosEvent:
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
 
-    def _sanitize_link_with_line_breaks(self, text_input: str) -> str:
-        # handle links with BeautifulSoup
-        soup = BeautifulSoup(text_input, "html.parser")
-
-        for data in soup(["a"]):
-            brs = data.find_all("br")
-            if len(brs) > 0:
-                pass
-
-            anchor_url = data.get("href")
-            if anchor_url is None:
-                continue
-
-            anchor_text = data.string
-            if anchor_text is None:
-                continue
-
-            replacement_text = anchor_url
-            amount_line_breaks = anchor_text.count("\\n")
-            sanitized_anchor_text = anchor_text.replace("\\n", "")
-            if anchor_url != sanitized_anchor_text:
-                replacement_text = f"{sanitized_anchor_text} ({anchor_url})"
-
-            replacement_text += " " + "\\n" * amount_line_breaks
-            print(replacement_text)
-
-            data.string = str(replacement_text)
-
-        text_without_links = "".join(soup.stripped_strings)
-        return text_without_links
-
-    def _remove_html_from_description(self, text_input: str) -> str:
-        """remove replace HTML line breaks and remove HTML tags"""
-        # handle single line breaks
-        text = text_input.replace("<br>", "\\n")
-        text = text.replace("<br/>", "\\n")
-
-        # handle paragraph (the HTMLFilter will take care of the <p> tag)
-        text = text.replace("</p>", "\\n</p>")
-
-        text_without_links = self._sanitize_link_with_line_breaks(text)
-
-        # strip other tags
-        f = helpers.HTMLFilter()
-        f.feed(text_without_links)
-
-        result = f.text
-        return result
-
     def _rem_multline_comments(self, text: str) -> str:
         """Remove multiline comments"""
         _reg = r"(?:^\s*#{3}|(?<=\\n)\s*#{3})(?:\\n)?[^#]{3}.*?(?:#{3}\\n|#{3}$)"
@@ -376,7 +326,7 @@ class ChronosEvent:
         except Exception:
             _desc = str(_desc)
 
-        _desc = self._remove_html_from_description(_desc)
+        _desc = helpers.remove_html_from_description(_desc)
 
         nocmt = self._rem_multline_comments(_desc)
         nocmt = self._rem_singline_comments(nocmt)
@@ -474,8 +424,8 @@ class ChronosEvent:
         icons = set(self.categories).intersection(set(self.source.icons))
         icon_str = ""
         if icons:
-            for i in icons:
-                icon_str += self.source.icons[i]
+            for icon in icons:
+                icon_str += self.source.icons[icon]
         return icon_str
 
     def update_state_by_title(self):
