@@ -81,7 +81,7 @@ class AppFactory:
 
                 if do_save:
                     event.save()
-                    logger.debug(f"Updated source event: {event.date} | {event.safe_title}")
+                    logger.debug(f"Updated source event: {event.date} | {event.title}")
 
     def init_schedulers(self) -> None:
         # appcron_value = f"*/{self.app_config.get('app', 'appcron')}"
@@ -162,7 +162,7 @@ class AppFactory:
                     updated_event = tgt.update_calDaV_event(src)
                     changed[event_id] = updated_event
 
-                    logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
+                    logger.info(f"Updated: {updated_event.date} | {updated_event.title}")
                 except Exception as ex:
                     logger.error(f"Could not update event: {ex}")
 
@@ -185,7 +185,7 @@ class AppFactory:
                 if target_cal[event_id].is_chronos_origin:
                     del_event = target_cal[event_id]
                     del_event.calDAV.delete()
-                    logger.info(f"Deleted: {del_event.date} | {del_event.safe_title}")
+                    logger.info(f"Deleted: {del_event.date} | {del_event.title}")
                     deleted[event_id] = del_event
             except Exception as ex:
                 logger.error(f"Could not delete obsolete event: {ex}")
@@ -211,7 +211,7 @@ class AppFactory:
                 logger.debug(f"Ignoring event excluded by tag: {new_event.date}")
                 continue
             if (calendar.ignore_planned and new_event.is_planned) or new_event.is_canceled:
-                logger.debug(f"Ignoring {new_event.status} event: {new_event.date} | {new_event.safe_title}")
+                logger.debug(f"Ignoring {new_event.status} event: {new_event.date} | {new_event.title}")
                 # skip planned events
                 continue
 
@@ -222,11 +222,11 @@ class AppFactory:
                 _cal.add_component(vevent)
                 _new = _cal.to_ical()
                 self.target.calendar.add_event(_new, no_overwrite=True, no_create=False)
-                logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
+                logger.info(f"Created: {new_event.date} | {new_event.title}")
                 new_events[event_id] = new_event
             except Exception as ex:
                 logger.error(f"Could not create new event: {ex}")
                 if new_event is not None and hasattr(new_event, "title") and hasattr(new_event, "date"):
-                    logger.error(f"Affected event: {new_event.safe_title} {new_event.date}")
+                    logger.error(f"Affected event: {new_event.title} {new_event.date}")
 
         return new_events

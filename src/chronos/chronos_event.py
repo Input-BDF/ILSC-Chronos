@@ -402,7 +402,7 @@ class ChronosEvent:
         if (src_event.source.ignore_planned and src_event.is_planned) or src_event.is_confidential or src_event.is_excluded:
             # DELETE rather than save
             self.calDAV.delete()
-            logger.success(f'Deleted {self.date} | {self.safe_title} out of the row in "{src_event.source.cal_name}".')
+            logger.success(f'Deleted {self.date} | {self.title} out of the row in "{src_event.source.cal_name}".')
         else:
             self.calDAV.save()
         return self
@@ -412,11 +412,11 @@ class ChronosEvent:
             if self.icons:
                 _new_title = icalendar.vText(f"{self.icons}{sep}{self.title}")
                 self.calDAV.icalendar_component["summary"] = _new_title
-                logger.success(f"Event icons set for {self.date} | {self.safe_title}")
+                logger.success(f"Event icons set for {self.date} | {self.title}")
                 return True
             # return False
         except Exception as ex:
-            logger.error(f"Could not set event icons for {self.date} | {self.safe_title} - {ex}")
+            logger.error(f"Could not set event icons for {self.date} | {self.title} - {ex}")
         return False
 
     @property
@@ -433,10 +433,10 @@ class ChronosEvent:
             if self.title.startswith("?"):  # or self.title.endswith("?"):
                 self.calDAV.icalendar_component["status"] = "TENTATIVE"
                 self.calDAV.icalendar_component["summary"] = icalendar.vText(self.calDAV.icalendar_component["summary"].lstrip("?").strip())
-                logger.success(f"Set correct visibility for {self.date} | {self.safe_title}")
+                logger.success(f"Set correct visibility for {self.date} | {self.title}")
                 return True
         except Exception as ex:
-            logger.error(f"Could not set correct visibility for {self.date} | {self.safe_title} - {ex}")
+            logger.error(f"Could not set correct visibility for {self.date} | {self.title} - {ex}")
 
         return False
 
@@ -444,15 +444,15 @@ class ChronosEvent:
         try:
             self.calDAV.save()
             self.calDAV.load()
-            logger.success(f"Updated {self.date} | {self.safe_title}")
+            logger.success(f"Updated {self.date} | {self.title}")
         except Exception as ex:
-            logger.error(f"Could not update for {self.date} | {self.safe_title} - {ex}")
+            logger.error(f"Could not update for {self.date} | {self.title} - {ex}")
 
     def __eq__(self, other):
         if self.md5 == other.md5:
             return True
         else:
-            logger.debug(f"Changed event found: {self.date} | {self.safe_title}")
+            logger.debug(f"Changed event found: {self.date} | {self.title}")
             logger.debug(f"{self.source.cal_name}: {self.md5_string}")
             logger.debug(f"{self.md5}")
             logger.debug("vs:")
