@@ -157,8 +157,8 @@ UID:e49cd2f3-51fe-4bf7-a1f7-074a05f986af
 DTSTART;VALUE=DATE:20261102
 DTEND;VALUE=DATE:20261103
 STATUS:CONFIRMED
-SUMMARY:Wired Character Test
-DESCRIPTION:#Comment Line\nThis\\nmaybebeaks something\n#This\\now should b
+SUMMARY:non-ASCII Cháräcṭër Tësṫ (αβγ 😎)
+DESCRIPTION:#Comment Line\nThis\\nmaybebeaks something\nnon-ASCII Cháräcṭër Tësṫ\ngreek: αβγ\nemojis: 😎🐥🎃\nsymbols: ╭⇶╟\n#This\\now should b
  e commented till here
 END:VEVENT
 
