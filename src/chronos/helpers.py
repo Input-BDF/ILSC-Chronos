@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import datetime as dt
-import zoneinfo
 from html.parser import HTMLParser
 from logging import Logger
+import zoneinfo
 
 from bs4 import BeautifulSoup
+import regex
 
 from chronos.config import Config
 
@@ -136,3 +137,24 @@ def remove_html_from_description(text_input: str) -> str:
 
     result = f.text
     return result
+
+
+def remove_multi_line_comments(text: str) -> str:
+    """Remove multi-line comments"""
+    _reg = r"(?:^\s*#{3}|(?<=\\n)\s*#{3})(?:\\n)?[^#]{3}.*?(?:#{3}\\n|#{3}$)"
+    nocmt = regex.sub(_reg, "", text)
+    return nocmt
+
+
+def remove_single_line_comments(text: str) -> str:
+    """Remove single-line comments"""
+    _reg = r"((?:^\s*#|(?<=\\n)\s*#).*?(?:[^\\]\\n|$))"
+    nocmt = regex.sub(_reg, "", text)
+    return nocmt
+
+
+def strip_newlines(text: str) -> str:
+    """reduce multiple newlines to max 2 remove strip leading/trailing newlines"""
+    _reg = r"(^(?:\s*\\n){1,}|(?<=(?:\s*\\n){2})(?:\s*\\n)*)|((?:\s*\\n)*$)"
+    nocmt = regex.sub(_reg, "", text)
+    return nocmt

@@ -303,24 +303,6 @@ class ChronosEvent:
     def combine_categories(self, first: list) -> list:
         return first.copy() + list(set(self.categories) - set(first))
 
-    def _rem_multline_comments(self, text: str) -> str:
-        """Remove multiline comments"""
-        _reg = r"(?:^\s*#{3}|(?<=\\n)\s*#{3})(?:\\n)?[^#]{3}.*?(?:#{3}\\n|#{3}$)"
-        nocmt = regex.sub(_reg, "", text)
-        return nocmt
-
-    def _rem_singline_comments(self, text: str) -> str:
-        """Remove single-line comments"""
-        _reg = r"((?:^\s*#|(?<=\\n)\s*#).*?(?:[^\\]\\n|$))"
-        nocmt = regex.sub(_reg, "", text)
-        return nocmt
-
-    def _strip_newlines(self, text: str) -> str:
-        """reduce multiple newlines to max 2 remove strip leading/trailing newlines"""
-        _reg = r"(^(?:\s*\\n){1,}|(?<=(?:\s*\\n){2})(?:\s*\\n)*)|((?:\s*\\n)*$)"
-        nocmt = regex.sub(_reg, "", text)
-        return nocmt
-
     def sanitize_description(self) -> icalendar.vText:
         _desc = self.description.to_ical()
         try:
@@ -330,10 +312,12 @@ class ChronosEvent:
 
         _desc = helpers.remove_html_from_description(_desc)
 
-        nocmt = self._rem_multline_comments(_desc)
-        nocmt = self._rem_singline_comments(nocmt)
-        nocmt = self._strip_newlines(nocmt)
-        return icalendar.vText(nocmt)
+        nocmt = helpers.remove_multi_line_comments(_desc)
+        nocmt = helpers.remove_single_line_comments(nocmt)
+        nocmt = helpers.strip_newlines(nocmt)
+
+        result = icalendar.vText(nocmt)
+        return result
 
     def create_ical_event(self) -> icalendar.Event:
         new_event = icalendar.Event()
