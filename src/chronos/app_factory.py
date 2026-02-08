@@ -73,9 +73,12 @@ class AppFactory:
 
                 do_save = False
                 if calendar.sanitize_stati:
-                    do_save = bool(do_save + event.update_state_by_title())
+                    was_update_successful = event.update_state_by_title()
+                    do_save = do_save or was_update_successful
                 if calendar.sanitize_icons_src:
-                    do_save = bool(do_save + event.set_title_icons())
+                    was_title_change_succesful = event.set_title_icons()
+                    do_save = do_save or was_title_change_succesful
+
                 if do_save:
                     event.save()
                     logger.debug(f"Updated source event: {event.date} | {event.safe_title}")
