@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # python lib
 from hashlib import md5
 from string import Template
