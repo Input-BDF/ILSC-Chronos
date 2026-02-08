@@ -64,21 +64,17 @@ class AppFactory:
 
     def sanitize_events(self) -> None:
         for calendar in self.calendars:
-            if not calendar.sanitize_stati and not calendar.sanitize_icons_src:
-                continue
-
-            for event in calendar.events_data.values():
-                if event.last_modified <= calendar.last_check:
-                    continue
-
-                do_save = False
-                if calendar.sanitize_stati:
-                    do_save = bool(do_save + event.update_state_by_title())
-                if calendar.sanitize_icons_src:
-                    do_save = bool(do_save + event.set_title_icons())
-                if do_save:
-                    event.save()
-                    logger.debug(f"Updated source event: {event.date} | {event.safe_title}")
+            if calendar.sanitize_stati or calendar.sanitize_icons_src:
+                for event in calendar.events_data.values():
+                    if event.last_modified > calendar.last_check:
+                        do_save = False
+                        if calendar.sanitize_stati:
+                            do_save = bool(do_save + event.update_state_by_title())
+                        if calendar.sanitize_icons_src:
+                            do_save = bool(do_save + event.set_title_icons())
+                        if do_save:
+                            event.save()
+                            logger.debug(f"Updated source event: {event.date} | {event.safe_title}")
 
     def init_schedulers(self) -> None:
         # appcron_value = f"*/{self.app_config.get('app', 'appcron')}"
