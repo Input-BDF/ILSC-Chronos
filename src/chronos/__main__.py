@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from chronos.app import main
 
 
