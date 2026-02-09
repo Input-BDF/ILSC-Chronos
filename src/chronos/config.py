@@ -281,6 +281,7 @@ class Config:
             ConfigValue("rotation", default="d"),
             ConfigValue("interval", int, default=1),
             ConfigValue("backups", int, default=7),
+            ConfigValue("show_tracebacks", bool, default=False),
         )
         # Section [debug]
         self.debug = ConfigSection(
