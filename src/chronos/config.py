@@ -376,7 +376,7 @@ class Config:
             for key, value in data.items():
                 self.parser.set(section, key, str(value))
             # Writing our configuration file to 'filename'
-            with open(self.files[0], "w") as configfile:
+            with open(self.files[0], "w", encoding="utf-8") as configfile:
                 self.parser.write(configfile)
             return True
         except Exception as ex:
