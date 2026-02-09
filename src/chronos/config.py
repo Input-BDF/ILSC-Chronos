@@ -87,7 +87,7 @@ class ConfigValue:
         Set Types:       frozenset
     """
 
-    def __init__(self, name, datatype=str, value=None, default=None):
+    def __init__(self, name, datatype: type = str, value=None, default=None):
         if datatype not in (
             str,
             int,
