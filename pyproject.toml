@@ -7,7 +7,7 @@ name = "Chronos"
 version = "0.1.0"
 dependencies = [
     "apscheduler>=3.11",
-    "bs4",
+    "beautifulsoup4",
     "caldav>=2.0.1",
     "colorlog",
     "icalendar>=6.3.1",
