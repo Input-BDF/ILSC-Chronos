@@ -187,7 +187,14 @@ class ChronosEvent:
     def is_excluded(self) -> bool:
         set_of_event_categories = set(map(lambda x: x.lower(), self.categories))
         set_of_excluded_tags = set(map(lambda x: x.lower(), self.source.tags_excluded))
-        do_exclude = not (set_of_excluded_tags.isdisjoint(set_of_event_categories))
+        do_exclude_by_tag = not (set_of_excluded_tags.isdisjoint(set_of_event_categories))
+
+        do_exclude_by_string_in_summary = False
+        for the_string in self.source.strings_in_summary_excluded:
+            if the_string.lower() in self.title.lower():
+                do_exclude_by_string_in_summary = True
+
+        do_exclude = do_exclude_by_tag or do_exclude_by_string_in_summary
         return do_exclude
 
     @property
