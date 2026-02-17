@@ -54,6 +54,7 @@ class CalendarHandler:
         self.default_location = None
 
         self.tags_excluded = []
+        self.strings_in_summary_excluded = []
 
         self.sanitize = {"stati": True, "source_icons": True, "target_icons": True}
 
