@@ -190,7 +190,7 @@ class ChronosEvent:
         do_exclude_by_tag = not (set_of_excluded_tags.isdisjoint(set_of_event_categories))
 
         do_exclude_by_string_in_summary = False
-        for the_string in self.source.strings_in_summary_excluded:
+        for the_string in self.source.exclude_event_by_strings_in_summary:
             if the_string.lower() in self.title.lower():
                 do_exclude_by_string_in_summary = True
 
