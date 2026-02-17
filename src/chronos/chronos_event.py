@@ -260,13 +260,13 @@ class ChronosEvent:
             return self.source_uid.encode("utf-8")
         return f"{self.uid}".encode("utf-8")
 
-    def populate_from_vcal_object(self) -> None:
+    def populate_from_vcal_object(self) -> bool:
         # TODO: ensure UID exists (at least it should )
         try:
             self.uid = str(self.ical.get("uid"))
             if self.is_confidential or self.is_excluded:
                 logger.info(f"Skipping further ical parsing on confidential or excluded event: {self.uid} | Source: {self.source.cal_name}")
-                return
+                return False
 
             raw_dtstamp = self.ical.get("dtstamp")
             raw_dtstart = self.ical.get("dtstart")
@@ -283,6 +283,8 @@ class ChronosEvent:
         except Exception as ex:
             logger.error(f"Could not process Event UID: {self.uid} | Source: {self.source.cal_name} | Reason: - {ex}")
             raise ex
+
+        return True
 
     def _get_ical_start_date(self) -> dt.date:
         _date = self.ical.get("dtstart").dt
