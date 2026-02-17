@@ -137,6 +137,7 @@ class CalendarHandler:
             # Only handle public events and those not containing exclude tags
             is_viable_event = not new_chronos_event.is_confidential and not new_chronos_event.is_excluded and not new_chronos_event.date_out_of_range
             if not is_viable_event:
+                logger.info(f"Skipping further ical parsing on confidential or excluded event: {new_chronos_event.uid} | Source: {self.cal_name}")
                 continue
 
             new_chronos_event.populate_from_vcal_object()
@@ -277,8 +278,11 @@ class CalendarHandler:
 
                 # Only handle public events and those not conataining exclude tags
                 if not chronos_event.is_confidential and not chronos_event.is_excluded and not chronos_event.date_out_of_range:
-                    chronos_event.populate_from_vcal_object()
-                    self.events_data[chronos_event.key] = chronos_event
+                    logger.info(f"Skipping further ical parsing on confidential or excluded event: {chronos_event.uid} | Source: {self.cal_name}")
+                    continue
+
+                chronos_event.populate_from_vcal_object()
+                self.events_data[chronos_event.key] = chronos_event
 
     def search_events_by_tags(self, tags: list) -> dict:
         """search read events created by chronos with given tags
