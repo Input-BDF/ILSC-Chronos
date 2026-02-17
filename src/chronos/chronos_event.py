@@ -185,9 +185,9 @@ class ChronosEvent:
 
     @property
     def is_excluded(self) -> bool:
-        setEventCats = set(map(lambda x: x.lower(), self.categories))
-        setExclude = set(map(lambda x: x.lower(), self.source.tags_excluded))
-        do_exclude = not (setExclude.isdisjoint(setEventCats))
+        set_of_event_categories = set(map(lambda x: x.lower(), self.categories))
+        set_of_excluded_tags = set(map(lambda x: x.lower(), self.source.tags_excluded))
+        do_exclude = not (set_of_excluded_tags.isdisjoint(set_of_event_categories))
         return do_exclude
 
     @property
