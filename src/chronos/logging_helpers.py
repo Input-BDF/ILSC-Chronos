@@ -40,7 +40,7 @@ def init_logging(app_config: "Config") -> None:
     if not fn_logging.exists():
         raise FileNotFoundError(fn_logging)
 
-    with open(fn_logging, "r") as f:
+    with open(fn_logging, "r", encoding="utf-8") as f:
         logging_settings = json.load(f)
 
     # resolve logging file paths and ensure parent directory existence

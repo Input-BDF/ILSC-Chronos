@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 apscheduler = ">=3.11"
-bs4 = "*"
+beautifulsoup4 = "*"
 caldav = ">=2.0.1"
 colorlog = "*"
 icalendar = ">=6.3.1"

@@ -44,7 +44,8 @@ class AppFactory:
         logger.debug("Base elements created")
 
     def read_cal_config(self) -> tuple[dict, dict, dict]:
-        with open(self.app_config.get("calendars", "file"), "r", encoding="utf-8") as f:
+        fn_config = self.app_config.get("calendars", "file")
+        with open(fn_config, "r", encoding="utf-8") as f:
             _data = json.load(f)
         return _data["target"], _data["calendars"], _data["icons"]
 
