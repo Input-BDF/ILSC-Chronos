@@ -60,3 +60,32 @@ class BaseCalendarHandler(abc.ABC):
         self.sanitize = {"stati": True, "source_icons": True, "target_icons": True}
 
         self.icons = {}
+
+    @property
+    def chronos_id(self) -> str:
+        result = md5(f"{self.cal_name}_{self.cal_primary}".encode("utf-8")).hexdigest()
+        return result
+
+    def config(self, conf_data):
+        for key, val in conf_data.items():
+            if type(val) is dict:
+                setattr(self, key, {**getattr(self, key), **val})
+            else:
+                setattr(self, key, val)
+
+    @abc.abstractmethod
+    def read(self) -> None:
+        """abstract read calendar events method. use subclasses for reading ICS file or from a CalDAV calendar."""
+        pass
+
+    def search_events_by_calid(self, calid: str) -> dict[str, ChronosEvent]:
+        """search read events created by chronos with given calendar id"""
+        found = {}
+        for key, event in self.events_data.items():
+            if calid == event.cal_id and event.is_chronos_origin:
+                found[key] = event
+
+        return found
+
+    def close_connection(self) -> None:
+        pass
