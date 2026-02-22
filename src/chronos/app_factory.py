@@ -116,7 +116,8 @@ class AppFactory:
             self.close_calendars()
             logger.debug("Closed sockets to calendars")
         except Exception as ex:
-            logger.critical(f"Cron excecution failed. Reason {ex}")
+            show_trace = self.app_config.get("log", "show_tracebacks")
+            logger.critical(f"Cron excecution failed. Reason {ex}", exc_info=show_trace)
 
     def close_calendars(self):
         try:
