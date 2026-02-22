@@ -21,15 +21,15 @@ from chronos import helpers
 
 # typing workaround to prevent circular import (see https://docs.python.org/3/library/typing.html#typing.TYPE_CHECKING)
 if TYPE_CHECKING:
-    from chronos.calendar_handler import CalendarHandler
+    from chronos.base_calendar_handler import BaseCalendarHandler
 
 
 logger = logging.getLogger(__name__)
 
 
 class ChronosEvent:
-    def __init__(self, source: "CalendarHandler"):
-        self.source: "CalendarHandler" = source
+    def __init__(self, source: "BaseCalendarHandler"):
+        self.source: "BaseCalendarHandler" = source
 
         self.uid = uuid.uuid1()
         self.created: dt.datetime = dt.datetime.now()

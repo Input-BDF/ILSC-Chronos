@@ -18,9 +18,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import icalendar
 
 # own code
+from chronos.base_calendar_handler import BaseCalendarHandler
+from chronos.caldav_calendar_handler import CalDavCalendarHandler
 from chronos.config import Config
-from chronos.calendar_handler import CalendarHandler
 from chronos.chronos_event import ChronosEvent
+from chronos.ics_calendar_handler import IcsCalendarHandler
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +33,9 @@ class AppFactory:
         target_calendar_timezone = self.app_config.get("app", "timezone")
         self.scheduler = BackgroundScheduler({"apscheduler.timezone": target_calendar_timezone})
 
-        self.calendars: list[CalendarHandler] = []
-        self.target: CalendarHandler
+        self.source_readable_calendars: list[IcsCalendarHandler] = []
+        self.source_writable_calendars: list[CalDavCalendarHandler] = []
+        self.target: CalDavCalendarHandler
 
         self.active = False
 
@@ -51,22 +54,30 @@ class AppFactory:
 
     def set_calendars(self, target_data: dict, calendars_data: dict, icons: dict) -> None:
         target_data["icons"] = icons
-        self.target = CalendarHandler(self.app_config)
+        self.target = CalDavCalendarHandler(self.app_config)
         self.target.config(target_data)
 
         for cal in calendars_data:
             cal["icons"] = icons
-            _calendar = CalendarHandler(self.app_config)
-            _calendar.config(cal)
-            self.calendars.append(_calendar)
+            calendar_adress = cal["cal_primary"]
+            if ".ics" in calendar_adress or "?export" in calendar_adress:
+                calendar_handler = IcsCalendarHandler(self.app_config)
+                calendar_handler.config(cal)
+                self.source_readable_calendars.append(calendar_handler)
+            else:
+                calendar_handler = CalDavCalendarHandler(self.app_config)
+                calendar_handler.config(cal)
+                self.source_writable_calendars.append(calendar_handler)
 
     def read_calendars(self) -> None:
         self.target.read()
-        for calendar in self.calendars:
+        for calendar in self.source_readable_calendars:
+            calendar.read()
+        for calendar in self.source_writable_calendars:
             calendar.read()
 
     def sanitize_events(self) -> None:
-        for calendar in self.calendars:
+        for calendar in self.source_writable_calendars:
             if not calendar.sanitize_stati and not calendar.sanitize_icons_src:
                 continue
 
@@ -121,14 +132,16 @@ class AppFactory:
     def close_calendars(self):
         try:
             self.target.close_connection()
-            for calendar in self.calendars:
+            all_calendars = self.source_readable_calendars + self.source_writable_calendars
+            for calendar in all_calendars:
                 calendar.close_connection()
         except Exception as ex:
             logger.critical(f"Closing sockets failed. Reason: {ex}")
 
     def sync_calendars(self) -> None:
         app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
-        for calendar in self.calendars:
+        all_calendars = self.source_readable_calendars + self.source_writable_calendars
+        for calendar in all_calendars:
             changed, deleted, new = self.sync_calendar(calendar)
             calendar.last_check = dt.datetime.now().astimezone(app_timezone)
 
@@ -138,7 +151,7 @@ class AppFactory:
             msg += f"{len(deleted)} entries deleted."
             logger.success(msg)
 
-    def sync_calendar(self, calendar: CalendarHandler) -> tuple[dict, dict, dict]:
+    def sync_calendar(self, calendar: BaseCalendarHandler) -> tuple[dict, dict, dict]:
         # Update target calendar events from source calendar
         changed = self._update_target_events(calendar)
         # delete iCal event not in source calendar
@@ -147,7 +160,7 @@ class AppFactory:
         new = self._create_target_events(calendar)
         return changed, deleted, new
 
-    def _update_target_events(self, calendar: CalendarHandler) -> dict:
+    def _update_target_events(self, calendar: BaseCalendarHandler) -> dict:
         """Update target calendar events"""
 
         source_cal = calendar.events_data
@@ -171,7 +184,7 @@ class AppFactory:
 
         return changed
 
-    def _delete_target_events(self, calendar: CalendarHandler) -> dict:
+    def _delete_target_events(self, calendar: BaseCalendarHandler) -> dict:
         """delete target iCal events not in source calendar"""
 
         wipe_on_target = self.app_config.get("calendars", "delete_on_target")
@@ -195,7 +208,7 @@ class AppFactory:
 
         return deleted
 
-    def _create_target_events(self, calendar: CalendarHandler) -> dict:
+    def _create_target_events(self, calendar: BaseCalendarHandler) -> dict:
         """create iCal events only in source calendar"""
         source_cal = calendar.events_data
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
