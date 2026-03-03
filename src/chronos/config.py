@@ -87,7 +87,7 @@ class ConfigValue:
         Set Types:       frozenset
     """
 
-    def __init__(self, name, datatype=str, value=None, default=None):
+    def __init__(self, name, datatype: type = str, value=None, default=None):
         if datatype not in (
             str,
             int,
@@ -281,6 +281,7 @@ class Config:
             ConfigValue("rotation", default="d"),
             ConfigValue("interval", int, default=1),
             ConfigValue("backups", int, default=7),
+            ConfigValue("show_tracebacks", bool, default=False),
         )
         # Section [debug]
         self.debug = ConfigSection(
