@@ -54,6 +54,7 @@ class CalendarHandler:
         self.default_location = None
 
         self.tags_excluded = []
+        self.exclude_event_by_strings_in_summary = []
 
         self.sanitize = {"stati": True, "source_icons": True, "target_icons": True}
 
@@ -134,8 +135,9 @@ class CalendarHandler:
             new_chronos_event._ics_event = event.copy()
 
             # Only handle public events and those not containing exclude tags
-            is_viable_event = not new_chronos_event.is_confidential and not new_chronos_event.is_excluded and not new_chronos_event.date_out_of_range
-            if not is_viable_event:
+            is_invalid_event = new_chronos_event.is_confidential or new_chronos_event.is_excluded or new_chronos_event.date_out_of_range
+            if is_invalid_event:
+                logger.info(f"Skipping further ical parsing on confidential or excluded event: {new_chronos_event.uid} | Source: {self.cal_name}")
                 continue
 
             new_chronos_event.populate_from_vcal_object()
@@ -275,9 +277,13 @@ class CalendarHandler:
                 chronos_event.calDAV = calEvent
 
                 # Only handle public events and those not conataining exclude tags
-                if not chronos_event.is_confidential and not chronos_event.is_excluded and not chronos_event.date_out_of_range:
-                    chronos_event.populate_from_vcal_object()
-                    self.events_data[chronos_event.key] = chronos_event
+                is_invalid_event = chronos_event.is_confidential or chronos_event.is_excluded or chronos_event.date_out_of_range
+                if is_invalid_event:
+                    logger.info(f"Skipping further ical parsing on confidential or excluded event: {chronos_event.uid} | Source: {self.cal_name}")
+                    continue
+
+                chronos_event.populate_from_vcal_object()
+                self.events_data[chronos_event.key] = chronos_event
 
     def search_events_by_tags(self, tags: list) -> dict:
         """search read events created by chronos with given tags
