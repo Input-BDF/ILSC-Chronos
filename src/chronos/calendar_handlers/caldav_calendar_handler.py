@@ -133,9 +133,13 @@ class CalDavCalendarHandler(BaseCalendarHandler):
                 chronos_event.calDAV = calEvent
 
                 # Only handle public events and those not conataining exclude tags
-                if not chronos_event.is_confidential and not chronos_event.is_excluded and not chronos_event.date_out_of_range:
-                    chronos_event.populate_from_vcal_object()
-                    self.events_data[chronos_event.key] = chronos_event
+                is_invalid_event = chronos_event.is_confidential or chronos_event.is_excluded or chronos_event.date_out_of_range
+                if is_invalid_event:
+                    logger.info(f"Skipping further ical parsing on confidential or excluded event: {chronos_event.uid} | Source: {self.cal_name}")
+                    continue
+
+                chronos_event.populate_from_vcal_object()
+                self.events_data[chronos_event.key] = chronos_event
 
     def close_connection(self) -> None:
         if self.client is not None:
