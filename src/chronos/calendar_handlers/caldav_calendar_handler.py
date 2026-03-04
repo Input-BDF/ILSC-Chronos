@@ -144,8 +144,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
                     edate = edate.date()
                 #if edate >= date.start_date():
                 """
-                chronos_event = ChronosEvent(self)
-                chronos_event.calDAV = calEvent
+                chronos_event = CalDavChronosEvent(self, calEvent)
 
                 # Only handle public events and those not conataining exclude tags
                 is_invalid_event = chronos_event.is_confidential or chronos_event.is_excluded or chronos_event.date_out_of_range
