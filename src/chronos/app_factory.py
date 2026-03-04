@@ -164,7 +164,7 @@ class AppFactory:
     def _update_target_events(self, calendar: BaseCalendarHandler) -> dict:
         """Update target calendar events"""
 
-        source_cal = calendar.events_data
+        source_cal = calendar.get_events_data()
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         changeSet = set(target_cal).intersection(set(source_cal))
         changed = {}
@@ -192,7 +192,7 @@ class AppFactory:
         if not wipe_on_target:
             return {}
 
-        source_cal = calendar.events_data
+        source_cal = calendar.get_events_data()
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         deleteSet = set(target_cal).difference(set(source_cal))
         deleted = {}
@@ -211,7 +211,8 @@ class AppFactory:
 
     def _create_target_events(self, calendar: BaseCalendarHandler) -> dict:
         """create iCal events only in source calendar"""
-        source_cal = calendar.events_data
+
+        source_cal = calendar.get_events_data()
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
         new_events: dict[icalendar.vText, ChronosEvent] = {}
