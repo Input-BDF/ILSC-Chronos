@@ -84,7 +84,7 @@ class BaseCalendarHandler(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def search_events_by_calid(self, calid: str) -> dict[str, ChronosEvent]:
+    def search_events_by_calid(self, calid: str) -> dict[str, BaseChronosEvent]:
         pass
 
     def close_connection(self) -> None:

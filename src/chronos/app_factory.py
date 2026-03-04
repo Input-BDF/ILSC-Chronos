@@ -23,6 +23,7 @@ from chronos.calendar_handlers.caldav_calendar_handler import CalDavCalendarHand
 from chronos.calendar_handlers.ics_calendar_handler import IcsCalendarHandler
 from chronos.config import Config
 from chronos.chronos_event import ChronosEvent
+from chronos.events.base_chronos_event import BaseChronosEvent
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +216,7 @@ class AppFactory:
         source_cal = calendar.get_events_data()
         target_cal = self.target.search_events_by_calid(calendar.chronos_id)
         newSet = set(source_cal).difference(set(target_cal))
-        new_events: dict[icalendar.vText, ChronosEvent] = {}
+        new_events: dict[icalendar.vText, BaseChronosEvent] = {}
 
         for event_id in newSet:
             new_event = source_cal[event_id]
