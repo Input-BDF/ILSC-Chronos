@@ -29,6 +29,9 @@ class IcsCalendarHandler(BaseCalendarHandler):
 
         self.readonly_events: dict[str, IcsChronosEvent] = {}
 
+    def get_events_data(self) -> dict[str, IcsChronosEvent]:
+        return self.readonly_events
+
     def search_events_by_calid(self, calid: str) -> dict[str, IcsChronosEvent]:
         """search read events created by chronos with given calendar id"""
         found = {}

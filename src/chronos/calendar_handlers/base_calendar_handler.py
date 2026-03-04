@@ -20,6 +20,8 @@ from chronos.chronos_event import ChronosEvent
 
 import abc
 
+from chronos.events.base_chronos_event import BaseChronosEvent
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +33,6 @@ class BaseCalendarHandler(abc.ABC):
         app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
         self.last_check = (dt.datetime.now() - dt.timedelta(days=7)).astimezone(app_timezone)
         self.cal_timezone_info = zoneinfo.ZoneInfo("UTC")
-
-        self.events_data: dict[str, ChronosEvent] = {}
 
         self.client = None
         self.calendar = None
@@ -61,6 +61,10 @@ class BaseCalendarHandler(abc.ABC):
         self.sanitize = {"stati": True, "source_icons": True, "target_icons": True}
 
         self.icons = {}
+
+    @abc.abstractmethod
+    def get_events_data(self) -> dict[str, BaseChronosEvent]:
+        pass
 
     @property
     def chronos_id(self) -> str:

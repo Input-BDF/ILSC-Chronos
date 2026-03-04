@@ -29,6 +29,9 @@ class CalDavCalendarHandler(BaseCalendarHandler):
 
         self.writable_events: dict[str, CalDavChronosEvent] = {}
 
+    def get_events_data(self) -> dict[str, CalDavChronosEvent]:
+        return self.writable_events
+
     @property
     def sanitize_stati(self) -> bool:
         return self.sanitize["stati"]
@@ -119,7 +122,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
                         logger.error(f"Error reading event: {ex}")
 
         # uncomment as helper to check fetched events sorted by sektion and dates
-        # dates = [value.key for (key, value) in sorted(self.events_data.items(), reverse=False)]
+        # dates = [value.key for (key, value) in sorted(self.writable_events.items(), reverse=False)]
         logger.debug("Time needed: {:.2f}s".format(time.time() - start))
 
         if self.calendar is None:
