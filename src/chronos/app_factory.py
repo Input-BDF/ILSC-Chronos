@@ -81,7 +81,7 @@ class AppFactory:
             if not calendar.sanitize_stati and not calendar.sanitize_icons_src:
                 continue
 
-            for event in calendar.events_data.values():
+            for event in calendar.writable_events.values():
                 if event.last_modified <= calendar.last_check:
                     continue
 
