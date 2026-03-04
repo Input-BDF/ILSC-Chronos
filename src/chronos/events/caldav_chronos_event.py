@@ -18,11 +18,8 @@ import icalendar
 
 # own code
 from chronos import helpers
-
-# typing workaround to prevent circular import (see https://docs.python.org/3/library/typing.html#typing.TYPE_CHECKING)
-if TYPE_CHECKING:
-    from chronos.events.base_chronos_event import BaseChronosEvent
-    from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
+from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
+from chronos.events.base_chronos_event import BaseChronosEvent
 
 
 logger = logging.getLogger(__name__)
