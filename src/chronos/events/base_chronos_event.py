@@ -265,7 +265,7 @@ class BaseChronosEvent(abc.ABC):
         try:
             self.uid = str(self.ical.get("uid"))
             if self.is_confidential or self.is_excluded:
-                logger.info(f"Skipping further ical parsing on confidential or excluded event: {self.uid} | Source: {self.source.cal_name}")
+                logger.info(f"Skipping confidential or excluded event: {self.uid} | Source: {self.source.cal_name} | {self.safe_title}")
                 return
 
             raw_dtstamp = self.ical.get("dtstamp")

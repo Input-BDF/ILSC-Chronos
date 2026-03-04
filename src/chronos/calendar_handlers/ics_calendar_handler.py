@@ -85,7 +85,7 @@ class IcsCalendarHandler(BaseCalendarHandler):
             # Only handle public events and those not containing exclude tags
             is_invalid_event = new_chronos_event.is_confidential or new_chronos_event.is_excluded or new_chronos_event.date_out_of_range
             if is_invalid_event:
-                logger.info(f"Skipping further ical parsing on confidential or excluded event: {new_chronos_event.uid} | Source: {self.cal_name}")
+                logger.info(f"Skipping confidential or excluded event: {new_chronos_event.uid} | Source: {self.cal_name} | {new_chronos_event.safe_title}")
                 continue
 
             new_chronos_event.populate_from_vcal_object()
