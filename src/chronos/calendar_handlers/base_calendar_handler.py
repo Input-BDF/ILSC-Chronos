@@ -18,11 +18,13 @@ import x_wr_timezone
 from chronos.config import Config
 from chronos.chronos_event import ChronosEvent
 
+import abc
+
 
 logger = logging.getLogger(__name__)
 
 
-class BaseCalendarHandler:
+class BaseCalendarHandler(abc.ABC):
     def __init__(self, app_config: Config):
         self.app_config = app_config
 
