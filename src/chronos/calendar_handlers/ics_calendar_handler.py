@@ -18,6 +18,7 @@ import x_wr_timezone
 from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
 from chronos.config import Config
 from chronos.chronos_event import ChronosEvent
+from chronos.events.ics_chronos_event import IcsChronosEvent
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,22 @@ class IcsCalendarHandler(BaseCalendarHandler):
     def __init__(self, app_config: Config):
         super().__init__(app_config)
 
+        self.readonly_events: dict[str, IcsChronosEvent] = {}
+
+    def search_events_by_calid(self, calid: str) -> dict[str, IcsChronosEvent]:
+        """search read events created by chronos with given calendar id"""
+        found = {}
+        for key, event in self.readonly_events.items():
+            if calid == event.cal_id and event.is_chronos_origin:
+                found[key] = event
+
+        return found
+
     def read(self):
         """read events from .ics file from the calendars primary adress"""
 
         # reset data first
-        self.events_data = {}
+        self.readonly_events = {}
 
         # can't open ICS file directly, so first download
         pathname_tmp = Path("./tmp")
@@ -65,8 +77,7 @@ class IcsCalendarHandler(BaseCalendarHandler):
             logger.warning(f"timezone of calendar ({self.cal_timezone_info}) is not the same as the target calendars timezone ({target_timezone})")
 
         for event in ics_calendar.walk("VEVENT"):
-            new_chronos_event = ChronosEvent(self)
-            new_chronos_event._ics_event = event.copy()
+            new_chronos_event = IcsChronosEvent(self, event.copy())
 
             # Only handle public events and those not containing exclude tags
             is_invalid_event = new_chronos_event.is_confidential or new_chronos_event.is_excluded or new_chronos_event.date_out_of_range
@@ -114,4 +125,4 @@ class IcsCalendarHandler(BaseCalendarHandler):
                 # print("event is in the far future")
                 continue
 
-            self.events_data[new_chronos_event.key] = new_chronos_event
+            self.readonly_events[new_chronos_event.key] = new_chronos_event

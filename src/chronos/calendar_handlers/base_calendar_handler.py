@@ -79,14 +79,9 @@ class BaseCalendarHandler(abc.ABC):
         """abstract read calendar events method. use subclasses for reading ICS file or from a CalDAV calendar."""
         pass
 
+    @abc.abstractmethod
     def search_events_by_calid(self, calid: str) -> dict[str, ChronosEvent]:
-        """search read events created by chronos with given calendar id"""
-        found = {}
-        for key, event in self.events_data.items():
-            if calid == event.cal_id and event.is_chronos_origin:
-                found[key] = event
-
-        return found
+        pass
 
     def close_connection(self) -> None:
         pass

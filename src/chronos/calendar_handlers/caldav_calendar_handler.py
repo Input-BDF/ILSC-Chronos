@@ -18,6 +18,7 @@ import x_wr_timezone
 from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
 from chronos.config import Config
 from chronos.chronos_event import ChronosEvent
+from chronos.events.caldav_chronos_event import CalDavChronosEvent
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,8 @@ logger = logging.getLogger(__name__)
 class CalDavCalendarHandler(BaseCalendarHandler):
     def __init__(self, app_config: Config):
         super().__init__(app_config)
+
+        self.writable_events: dict[str, CalDavChronosEvent] = {}
 
     @property
     def sanitize_stati(self) -> bool:
@@ -48,6 +51,15 @@ class CalDavCalendarHandler(BaseCalendarHandler):
 
         return calendars
 
+    def search_events_by_calid(self, calid: str) -> dict[str, CalDavChronosEvent]:
+        """search read events created by chronos with given calendar id"""
+        found = {}
+        for key, event in self.writable_events.items():
+            if calid == event.cal_id and event.is_chronos_origin:
+                found[key] = event
+
+        return found
+
     def read(self) -> None:
         """read events from caldav calendar"""
         logger.debug(f'Connecting Calendar "{self.cal_name}"')
@@ -60,7 +72,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
             logger.critical(f"Error on CALDav auth: {ex}")
             raise
 
-        self.events_data = {}
+        self.writable_events = {}
 
         logger.debug("Time needed: {:.2f}s".format(time.time() - start))
         start = time.time()
@@ -139,7 +151,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
                     continue
 
                 chronos_event.populate_from_vcal_object()
-                self.events_data[chronos_event.key] = chronos_event
+                self.writable_events[chronos_event.key] = chronos_event
 
     def close_connection(self) -> None:
         if self.client is not None:
