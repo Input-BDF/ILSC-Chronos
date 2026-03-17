@@ -361,8 +361,8 @@ class BaseChronosEvent(abc.ABC):
     def set_title_icons(self, sep=" | "):
         try:
             if self.icons:
-                _new_title = icalendar.vText(f"{self.icons}{sep}{self.title}")
-                self.calDAV.icalendar_component["summary"] = _new_title
+                new_title = icalendar.vText(f"{self.icons}{sep}{self.title}")
+                self.ical["summary"] = new_title
                 logger.success(f"Event icons set for {self.date} | {self.safe_title}")
                 return True
             # return False
