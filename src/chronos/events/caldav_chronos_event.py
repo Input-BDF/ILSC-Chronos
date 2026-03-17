@@ -73,27 +73,6 @@ class CalDavChronosEvent(BaseChronosEvent):
             self.calDAV.save()
         return self
 
-    def set_title_icons(self, sep=" | "):
-        try:
-            if self.icons:
-                _new_title = icalendar.vText(f"{self.icons}{sep}{self.title}")
-                self.calDAV.icalendar_component["summary"] = _new_title
-                logger.success(f"Event icons set for {self.date} | {self.safe_title}")
-                return True
-            # return False
-        except Exception as ex:
-            logger.error(f"Could not set event icons for {self.date} | {self.safe_title} - {ex}")
-        return False
-
-    @property
-    def icons(self) -> str:
-        icons = set(self.categories).intersection(set(self.source.icons))
-        icon_str = ""
-        if icons:
-            for icon in icons:
-                icon_str += self.source.icons[icon]
-        return icon_str
-
     def update_state_by_title(self):
         try:
             if self.title.startswith("?"):  # or self.title.endswith("?"):
