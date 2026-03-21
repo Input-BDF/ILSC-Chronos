@@ -155,29 +155,30 @@ class AppFactory:
 
     def sync_calendar(self, calendar: BaseCalendarHandler) -> tuple[dict, dict, dict]:
         # Update target calendar events from source calendar
-        changed = self._update_target_events(calendar)
+        changed_events = self._update_target_events(calendar)
         # delete iCal event not in source calendar
-        deleted = self._delete_target_events(calendar)
+        deleted_events = self._delete_target_events(calendar)
         # create iCal event only in source calendar
-        new = self._create_target_events(calendar)
-        return changed, deleted, new
+        new_events = self._create_target_events(calendar)
+        return changed_events, deleted_events, new_events
 
     def _update_target_events(self, calendar: BaseCalendarHandler) -> dict:
-        """Update target calendar events"""
+        """Update existing target calendar events"""
 
-        source_cal = calendar.get_events_data()
-        target_cal = self.target.search_events_by_calid(calendar.chronos_id)
-        changeSet = set(target_cal).intersection(set(source_cal))
+        source_events = calendar.get_events_data()
+        target_events = self.target.search_events_by_calid(calendar.chronos_id)
+        change_set = set(target_events).intersection(set(source_events))
         changed = {}
 
-        for event_id in changeSet:
-            tgt = target_cal[event_id]
-            src = source_cal[event_id]
+        for event_id in change_set:
+            target_event = target_events[event_id]
+            source_event = source_events[event_id]
+
             # TODO: (Re)Implement respect remote changes
-            # if src.last_modified > tgt.last_modified and not tgt.remote_changed:
-            if src.last_modified > tgt.last_modified:
+            # if source_event.last_modified > target_event.last_modified and not target_event.remote_changed:
+            if source_event.last_modified > target_event.last_modified:
                 try:
-                    updated_event = tgt.update_calDaV_event(src)
+                    updated_event = target_event.update_calDaV_event(source_event)
                     changed[event_id] = updated_event
 
                     logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
@@ -187,39 +188,39 @@ class AppFactory:
         return changed
 
     def _delete_target_events(self, calendar: BaseCalendarHandler) -> dict:
-        """delete target iCal events not in source calendar"""
+        """delete target iCal events that are not in source calendar (any more)"""
 
         wipe_on_target = self.app_config.get("calendars", "delete_on_target")
         if not wipe_on_target:
             return {}
 
-        source_cal = calendar.get_events_data()
-        target_cal = self.target.search_events_by_calid(calendar.chronos_id)
-        deleteSet = set(target_cal).difference(set(source_cal))
+        source_events = calendar.get_events_data()
+        target_events = self.target.search_events_by_calid(calendar.chronos_id)
+        delete_set = set(target_events).difference(set(source_events))
         deleted = {}
 
-        for event_id in deleteSet:
+        for event_id in delete_set:
             try:
-                if target_cal[event_id].is_chronos_origin:
-                    del_event = target_cal[event_id]
-                    del_event.calDAV.delete()
-                    logger.info(f"Deleted: {del_event.date} | {del_event.safe_title}")
-                    deleted[event_id] = del_event
+                if target_events[event_id].is_chronos_origin:
+                    delete_event = target_events[event_id]
+                    delete_event.calDAV.delete()
+                    logger.info(f"Deleted: {delete_event.date} | {delete_event.safe_title}")
+                    deleted[event_id] = delete_event
             except Exception as ex:
                 logger.error(f"Could not delete obsolete event: {ex}")
 
         return deleted
 
     def _create_target_events(self, calendar: BaseCalendarHandler) -> dict:
-        """create iCal events only in source calendar"""
+        """create iCal events that are only in source calendar"""
 
-        source_cal = calendar.get_events_data()
-        target_cal = self.target.search_events_by_calid(calendar.chronos_id)
-        newSet = set(source_cal).difference(set(target_cal))
+        source_events = calendar.get_events_data()
+        target_events = self.target.search_events_by_calid(calendar.chronos_id)
+        new_set = set(source_events).difference(set(target_events))
         new_events: dict[icalendar.vText, BaseChronosEvent] = {}
 
-        for event_id in newSet:
-            new_event = source_cal[event_id]
+        for event_id in new_set:
+            new_event = source_events[event_id]
             if not (new_event.has_title):
                 logger.debug(f"Ignoring event without title: {new_event.date}")
                 continue
