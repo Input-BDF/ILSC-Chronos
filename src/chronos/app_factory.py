@@ -95,7 +95,7 @@ class AppFactory:
                     do_save = do_save or was_title_change_succesful
 
                 if do_save:
-                    event.save()
+                    event.save_to_caldav()
                     logger.debug(f"Updated source event: {event.date} | {event.safe_title}")
 
     def init_schedulers(self) -> None:

@@ -85,7 +85,7 @@ class CalDavChronosEvent(BaseChronosEvent):
 
         return False
 
-    def save(self):
+    def save_to_caldav(self):
         try:
             self.calDAV.save()
             self.calDAV.load()
