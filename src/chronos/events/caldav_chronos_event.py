@@ -73,7 +73,7 @@ class CalDavChronosEvent(BaseChronosEvent):
             self.calDAV.save()
         return self
 
-    def update_state_by_title(self):
+    def update_source_event_by_title(self):
         try:
             if self.title.startswith("?"):  # or self.title.endswith("?"):
                 self.calDAV.icalendar_component["status"] = "TENTATIVE"
