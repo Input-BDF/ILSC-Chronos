@@ -73,19 +73,6 @@ class CalDavChronosEvent(BaseChronosEvent):
             self.calDAV.save()
         return self
 
-    def update_source_event_by_title(self):
-        try:
-            if self.title.startswith("?"):  # or self.title.endswith("?"):
-                self.ical["status"] = "TENTATIVE"
-                reduced_summary = self.ical["summary"].lstrip("?").strip()
-                self.ical["summary"] = icalendar.vText(reduced_summary)
-                logger.success(f"Set correct visibility for {self.date} | {self.safe_title}")
-                return True
-        except Exception as ex:
-            logger.error(f"Could not set correct visibility for {self.date} | {self.safe_title} - {ex}")
-
-        return False
-
     def save_to_caldav(self):
         try:
             self.calDAV.save()

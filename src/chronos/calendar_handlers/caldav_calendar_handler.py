@@ -155,6 +155,19 @@ class CalDavCalendarHandler(BaseCalendarHandler):
                 chronos_event.populate_from_vcal_object()
                 self.writable_events[chronos_event.key] = chronos_event
 
+    def update_source_event_by_title(self, caldav_event: CalDavChronosEvent):
+        try:
+            if caldav_event.title.startswith("?"):  # or self.title.endswith("?"):
+                caldav_event.ical["status"] = "TENTATIVE"
+                reduced_summary = caldav_event.ical["summary"].lstrip("?").strip()
+                caldav_event.ical["summary"] = icalendar.vText(reduced_summary)
+                logger.success(f"Set correct visibility for {caldav_event.date} | {caldav_event.safe_title}")
+                return True
+        except Exception as ex:
+            logger.error(f"Could not set correct visibility for {caldav_event.date} | {caldav_event.safe_title} - {ex}")
+
+        return False
+
     def close_connection(self) -> None:
         if self.client is not None:
             self.client.close()
