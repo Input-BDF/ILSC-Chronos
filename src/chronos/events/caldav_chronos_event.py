@@ -72,11 +72,3 @@ class CalDavChronosEvent(BaseChronosEvent):
         else:
             self.calDAV.save()
         return self
-
-    def save_to_caldav(self):
-        try:
-            self.calDAV.save()
-            self.calDAV.load()
-            logger.success(f"Updated {self.date} | {self.safe_title}")
-        except Exception as ex:
-            logger.error(f"Could not update for {self.date} | {self.safe_title} - {ex}")

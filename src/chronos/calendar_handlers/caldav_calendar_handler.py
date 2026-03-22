@@ -168,6 +168,14 @@ class CalDavCalendarHandler(BaseCalendarHandler):
 
         return False
 
+    def save_to_caldav(self, caldav_event: CalDavChronosEvent):
+        try:
+            caldav_event.calDAV.save()
+            caldav_event.calDAV.load()
+            logger.success(f"Updated {caldav_event.date} | {caldav_event.safe_title}")
+        except Exception as ex:
+            logger.error(f"Could not update for {caldav_event.date} | {caldav_event.safe_title} - {ex}")
+
     def close_connection(self) -> None:
         if self.client is not None:
             self.client.close()
