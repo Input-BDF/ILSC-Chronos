@@ -77,7 +77,7 @@ class AppFactory:
         for calendar in self.source_writable_calendars:
             calendar.read()
 
-    def sanitize_source_events(self) -> None:
+    def sanitize_events(self) -> None:
         for calendar in self.source_writable_calendars:
             if not calendar.sanitize_stati and not calendar.sanitize_icons_src:
                 continue
@@ -121,7 +121,7 @@ class AppFactory:
         try:
             self.read_calendars()
             logger.debug("Done parsing source calendars")
-            self.sanitize_source_events()
+            self.sanitize_events()
             logger.debug("Cleaning up")
             self.sync_calendars()
             logger.debug("--== All done for this run ==--")
