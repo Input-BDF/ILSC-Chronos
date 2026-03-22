@@ -76,8 +76,9 @@ class CalDavChronosEvent(BaseChronosEvent):
     def update_source_event_by_title(self):
         try:
             if self.title.startswith("?"):  # or self.title.endswith("?"):
-                self.calDAV.icalendar_component["status"] = "TENTATIVE"
-                self.calDAV.icalendar_component["summary"] = icalendar.vText(self.calDAV.icalendar_component["summary"].lstrip("?").strip())
+                self.ical["status"] = "TENTATIVE"
+                reduced_summary = self.ical["summary"].lstrip("?").strip()
+                self.ical["summary"] = icalendar.vText(reduced_summary)
                 logger.success(f"Set correct visibility for {self.date} | {self.safe_title}")
                 return True
         except Exception as ex:
