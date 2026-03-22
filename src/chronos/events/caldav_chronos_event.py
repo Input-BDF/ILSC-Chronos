@@ -35,7 +35,7 @@ class CalDavChronosEvent(BaseChronosEvent):
         return f"CalDavChronosEvent - {self.date} | {self.title}"
 
     @property
-    def ical(self) -> caldav.Event:
+    def ical(self) -> icalendar.Event:
         return self.calDAV.icalendar_component
 
     def update_calDaV_event(self, src_event):
