@@ -92,3 +92,16 @@ class BaseCalendarHandler(abc.ABC):
 
     def update_remote_event(self, target_event, source_event):
         pass
+
+    def sanitize_event_by_title(self, caldav_event: BaseChronosEvent):
+        try:
+            if caldav_event.title.startswith("?"):  # or self.title.endswith("?"):
+                caldav_event.ical["status"] = "TENTATIVE"
+                reduced_summary = caldav_event.ical["summary"].lstrip("?").strip()
+                caldav_event.ical["summary"] = icalendar.vText(reduced_summary)
+                logger.success(f"Set correct visibility for {caldav_event.date} | {caldav_event.safe_title}")
+                return True
+        except Exception as ex:
+            logger.error(f"Could not set correct visibility for {caldav_event.date} | {caldav_event.safe_title} - {ex}")
+
+        return False
