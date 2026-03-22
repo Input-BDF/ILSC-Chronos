@@ -39,6 +39,7 @@ class CalDavChronosEvent(BaseChronosEvent):
         return self.calDAV.icalendar_component
 
     def update_calDaV_event(self, src_event):
+        # DEPRECATED
         """update data from given event"""
 
         self.ical["summary"] = src_event.prefixed_title

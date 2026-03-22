@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # python lib
+from chronos.events.base_chronos_event import BaseChronosEvent
 from hashlib import md5
 from pathlib import Path
 from urllib.request import urlretrieve
@@ -13,6 +14,11 @@ import zoneinfo
 import caldav
 import icalendar
 import x_wr_timezone
+
+from icalendar import vDDDTypes as icalDate
+from icalendar.prop import vCategory
+import caldav
+import icalendar
 
 # own code
 from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
@@ -175,6 +181,41 @@ class CalDavCalendarHandler(BaseCalendarHandler):
             logger.success(f"Updated {caldav_event.date} | {caldav_event.safe_title}")
         except Exception as ex:
             logger.error(f"Could not update for {caldav_event.date} | {caldav_event.safe_title} - {ex}")
+
+    def update_remote_event(self, target_event: CalDavChronosEvent, source_event: BaseChronosEvent):
+        """update data from given event"""
+
+        target_event.ical["summary"] = source_event.prefixed_title
+
+        if source_event.description is None and "description" in target_event.calDAV.vobject_instance.vevent.contents.keys():
+            # remove description from VEVENT cause it should not be there
+            target_event.calDAV.vobject_instance.vevent.remove(target_event.calDAV.vobject_instance.vevent.description)
+
+        if source_event.source.ignore_descriptions is False and source_event.description:
+            # add description to VEVENT
+            if "description" not in target_event.calDAV.vobject_instance.vevent.contents.keys():
+                target_event.calDAV.vobject_instance.vevent.add("description")
+            target_event.calDAV.vobject_instance.vevent.description.value = source_event.sanitize_description()
+
+        if source_event.location is None:
+            target_event.ical["location"] = source_event.source.default_location
+        else:
+            target_event.ical["location"] = source_event.location
+
+        target_event.ical["categories"] = vCategory(source_event.combine_categories(source_event.source.tags))
+        target_event.ical["dtstart"] = icalDate(source_event.date_start)
+        target_event.ical["dtend"] = icalDate(source_event.date_end)
+        # add/update last modified parameter cause nextcloud does not
+        target_event.ical["last-modified"] = icalDate(dt.datetime.now())
+
+        target_event.ical["status"] = source_event.status
+        if (source_event.source.ignore_planned and source_event.is_planned) or source_event.is_confidential or source_event.is_excluded:
+            # DELETE rather than save
+            target_event.calDAV.delete()
+            logger.success(f'Deleted {target_event.date} | {target_event.safe_title} out of the row in "{source_event.source.cal_name}".')
+        else:
+            target_event.calDAV.save()
+        return target_event
 
     def close_connection(self) -> None:
         if self.client is not None:

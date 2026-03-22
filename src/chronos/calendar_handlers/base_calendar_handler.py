@@ -89,3 +89,6 @@ class BaseCalendarHandler(abc.ABC):
 
     def close_connection(self) -> None:
         pass
+
+    def update_remote_event(self, target_event, source_event):
+        pass
