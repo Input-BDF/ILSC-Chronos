@@ -41,7 +41,7 @@ class CalDavChronosEvent(BaseChronosEvent):
     def update_calDaV_event(self, src_event):
         """update data from given event"""
 
-        self.calDAV.icalendar_component["summary"] = src_event.prefixed_title
+        self.ical["summary"] = src_event.prefixed_title
 
         if src_event.description is None and "description" in self.calDAV.vobject_instance.vevent.contents.keys():
             # remove description from VEVENT cause it should not be there
@@ -54,17 +54,17 @@ class CalDavChronosEvent(BaseChronosEvent):
             self.calDAV.vobject_instance.vevent.description.value = src_event.sanitize_description()
 
         if src_event.location is None:
-            self.calDAV.icalendar_component["location"] = src_event.source.default_location
+            self.ical["location"] = src_event.source.default_location
         else:
-            self.calDAV.icalendar_component["location"] = src_event.location
+            self.ical["location"] = src_event.location
 
-        self.calDAV.icalendar_component["categories"] = vCategory(src_event.combine_categories(src_event.source.tags))
-        self.calDAV.icalendar_component["dtstart"] = icalDate(src_event.date_start)
-        self.calDAV.icalendar_component["dtend"] = icalDate(src_event.date_end)
+        self.ical["categories"] = vCategory(src_event.combine_categories(src_event.source.tags))
+        self.ical["dtstart"] = icalDate(src_event.date_start)
+        self.ical["dtend"] = icalDate(src_event.date_end)
         # add/update last modified parameter cause nextcloud does not
-        self.calDAV.icalendar_component["last-modified"] = icalDate(dt.datetime.now())
+        self.ical["last-modified"] = icalDate(dt.datetime.now())
 
-        self.calDAV.icalendar_component["status"] = src_event.status
+        self.ical["status"] = src_event.status
         if (src_event.source.ignore_planned and src_event.is_planned) or src_event.is_confidential or src_event.is_excluded:
             # DELETE rather than save
             self.calDAV.delete()
