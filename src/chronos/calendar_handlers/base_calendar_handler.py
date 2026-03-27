@@ -1,27 +1,18 @@
 # -*- coding: utf-8 -*-
 
 # python lib
-from hashlib import md5
-from pathlib import Path
-from urllib.request import urlretrieve
+import abc
 import datetime as dt
 import logging
-import time
 import zoneinfo
+from hashlib import md5
 
 # external libs
-import caldav
 import icalendar
-import x_wr_timezone
 
 # own code
 from chronos.config import Config
-from chronos.chronos_event import ChronosEvent
-
-import abc
-
 from chronos.events.base_chronos_event import BaseChronosEvent
-
 
 logger = logging.getLogger(__name__)
 

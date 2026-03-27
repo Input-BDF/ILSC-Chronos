@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 
 # python lib
-from chronos.events.base_chronos_event import BaseChronosEvent
-from hashlib import md5
-from pathlib import Path
-from urllib.request import urlretrieve
 import datetime as dt
 import logging
 import time
@@ -13,17 +9,13 @@ import zoneinfo
 # external libs
 import caldav
 import icalendar
-import x_wr_timezone
-
 from icalendar import vDDDTypes as icalDate
 from icalendar.prop import vCategory
-import caldav
-import icalendar
 
 # own code
 from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
 from chronos.config import Config
-from chronos.chronos_event import ChronosEvent
+from chronos.events.base_chronos_event import BaseChronosEvent
 from chronos.events.caldav_chronos_event import CalDavChronosEvent
 
 logger = logging.getLogger(__name__)

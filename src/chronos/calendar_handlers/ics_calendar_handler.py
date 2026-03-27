@@ -1,23 +1,19 @@
 # -*- coding: utf-8 -*-
 
 # python lib
-from hashlib import md5
-from pathlib import Path
-from urllib.request import urlretrieve
 import datetime as dt
 import logging
-import time
 import zoneinfo
+from pathlib import Path
+from urllib.request import urlretrieve
 
 # external libs
-import caldav
 import icalendar
 import x_wr_timezone
 
 # own code
 from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
 from chronos.config import Config
-from chronos.chronos_event import ChronosEvent
 from chronos.events.ics_chronos_event import IcsChronosEvent
 
 logger = logging.getLogger(__name__)

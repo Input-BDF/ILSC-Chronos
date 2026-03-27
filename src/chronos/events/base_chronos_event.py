@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 
 # python lib
+import abc
+import datetime as dt
+import logging
+import uuid
+import zoneinfo
 from hashlib import md5
 from string import Template
 from typing import TYPE_CHECKING
-import datetime as dt
-import logging
-import abc
-import regex
-import uuid
-import zoneinfo
 
 # external libs
-from icalendar import vDDDTypes as icalDate
-from icalendar.prop import vCategory
-import caldav
 import icalendar
+import regex
 
 # own code
 from chronos import helpers
