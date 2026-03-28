@@ -185,7 +185,7 @@ class AppFactory:
             if source_event.last_modified > target_event.last_modified:
                 try:
                     # updated_event = target_event.update_calDaV_event(source_event)
-                    updated_event = cal_handler.update_remote_event(target_event, source_event)
+                    updated_event = target_cal_handler.update_remote_event(target_event, source_event)
                     changed[event_id] = updated_event
 
                     logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
