@@ -295,12 +295,12 @@ class CalDavCalendarHandler(BaseCalendarHandler):
                 continue
 
             try:
-                _cal = icalendar.Calendar()
-                vevent = new_event.create_ical_event()
+                tmp_cal = icalendar.Calendar()
+                vevent: icalendar.Event = new_event.create_ical_event()
 
-                _cal.add_component(vevent)
-                _new = _cal.to_ical()
-                self.calendar.add_event(_new, no_overwrite=True, no_create=False)
+                tmp_cal.add_component(vevent)
+                new_ical_raw_text: bytes = tmp_cal.to_ical()
+                self.calendar.add_event(new_ical_raw_text, no_overwrite=True, no_create=False)
                 logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
                 new_events[event_id] = new_event
             except Exception as ex:

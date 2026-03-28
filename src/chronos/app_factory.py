@@ -14,15 +14,12 @@ import time
 import zoneinfo
 
 # external libs
-import icalendar
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # own code
-from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
 from chronos.calendar_handlers.caldav_calendar_handler import CalDavCalendarHandler
 from chronos.calendar_handlers.ics_calendar_handler import IcsCalendarHandler
 from chronos.config import Config
-from chronos.events.base_chronos_event import BaseChronosEvent
 
 logger = logging.getLogger(__name__)
 
