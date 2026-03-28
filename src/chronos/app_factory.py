@@ -174,7 +174,7 @@ class AppFactory:
         source_events = cal_handler.get_events_data()
         target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
         change_set = set(target_events).intersection(set(source_events))
-        changed = {}
+        changed: dict[str, BaseChronosEvent] = {}
 
         for event_id in change_set:
             target_event = target_events[event_id]
@@ -204,7 +204,7 @@ class AppFactory:
         source_events = cal_handler.get_events_data()
         target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
         delete_set = set(target_events).difference(set(source_events))
-        deleted = {}
+        deleted: dict[str, BaseChronosEvent] = {}
 
         for event_id in delete_set:
             try:
@@ -224,7 +224,7 @@ class AppFactory:
         source_events = cal_handler.get_events_data()
         target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
         new_set = set(source_events).difference(set(target_events))
-        new_events: dict[icalendar.vText, BaseChronosEvent] = {}
+        new_events: dict[str, BaseChronosEvent] = {}
 
         for event_id in new_set:
             new_event = source_events[event_id]
