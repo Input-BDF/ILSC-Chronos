@@ -8,6 +8,8 @@ import zoneinfo
 
 # external libs
 import caldav
+import caldav.collection
+import caldav.davclient
 import icalendar
 from icalendar import vDDDTypes as icalDate
 from icalendar.prop import vCategory
@@ -24,6 +26,10 @@ logger = logging.getLogger(__name__)
 class CalDavCalendarHandler(BaseCalendarHandler):
     def __init__(self, app_config: Config):
         super().__init__(app_config)
+
+        self.client: davclient.DAVClient
+        self.calendar: caldav.collection.Calendar
+        self.principal: davclient.Principal
 
         self.writable_events: dict[str, CalDavChronosEvent] = {}
 
@@ -42,7 +48,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
     def sanitize_icons_tgt(self) -> bool:
         return self.sanitize["target_icons"]
 
-    def available_calendars(self) -> list[caldav.Calendar]:
+    def available_calendars(self) -> list[caldav.collection.Calendar]:
         calendars = self.principal.calendars()
         logger.info(f"Fetching available calendars on: {self.cal_name}")
         logger.debug("Found:")
@@ -67,8 +73,12 @@ class CalDavCalendarHandler(BaseCalendarHandler):
 
         start = time.time()
         try:
-            self.client = caldav.DAVClient(self.cal_primary, username=self.cal_user, password=self.cal_passwd)
-            self.principal = self.client.principal()
+            self.client = caldav.davclient.DAVClient(
+                url=self.cal_primary,
+                username=self.cal_user,
+                password=self.cal_passwd,
+            )
+            self.principal = self.client.get_principal()
         except Exception as ex:
             logger.critical(f"Error on CALDav auth: {ex}")
             raise
@@ -126,7 +136,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
         if self.calendar is None:
             raise ValueError(f"read_from_cal_dav: target calendar '{self.cal_name}' was not found!")
 
-    def read_event(self, calEvent: caldav.Event) -> None:
+    def read_event(self, calEvent: caldav.collection.Event) -> None:
         """read event data"""
         # TODO: Clean this mess. As there should only be one vevent component. at least if caldav filter is working
         cal = icalendar.Calendar.from_ical(calEvent.data)
