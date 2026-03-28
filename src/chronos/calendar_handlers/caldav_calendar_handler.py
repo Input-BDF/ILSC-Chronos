@@ -27,9 +27,9 @@ class CalDavCalendarHandler(BaseCalendarHandler):
     def __init__(self, app_config: Config):
         super().__init__(app_config)
 
-        self.client: davclient.DAVClient
+        self.client: caldav.davclient.DAVClient
         self.calendar: caldav.collection.Calendar
-        self.principal: davclient.Principal
+        self.principal: caldav.davclient.Principal
 
         self.writable_events: dict[str, CalDavChronosEvent] = {}
 
