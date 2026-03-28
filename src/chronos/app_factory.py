@@ -143,7 +143,7 @@ class AppFactory:
         app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
         all_calendars = self.source_readable_calendars + self.source_writable_calendars
         for calendar in all_calendars:
-            changed, deleted, new = self.sync_calendar(calendar)
+            changed, deleted, new = self.sync_calendar(calendar, self.target)
             calendar.last_check = dt.datetime.now().astimezone(app_timezone)
 
             msg = f'Done comparing with "{calendar.cal_name}". '
@@ -152,21 +152,21 @@ class AppFactory:
             msg += f"{len(deleted)} entries deleted."
             logger.success(msg)
 
-    def sync_calendar(self, cal_handler: BaseCalendarHandler) -> tuple[dict, dict, dict]:
+    def sync_calendar(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> tuple[dict, dict, dict]:
         # Update target calendar events from source calendar
-        changed_events = self._update_target_events(cal_handler)
+        changed_events = self._update_target_events(cal_handler, target_cal_handler)
         # delete iCal event not in source calendar
-        deleted_events = self._delete_target_events(cal_handler)
+        deleted_events = self._delete_target_events(cal_handler, target_cal_handler)
         # create iCal event only in source calendar
-        new_events = self._create_target_events(cal_handler)
+        new_events = self._create_target_events(cal_handler, target_cal_handler)
 
         return changed_events, deleted_events, new_events
 
-    def _update_target_events(self, cal_handler: BaseCalendarHandler) -> dict:
+    def _update_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> dict:
         """Update existing target calendar events"""
 
         source_events = cal_handler.get_events_data()
-        target_events = self.target.search_events_by_calid(cal_handler.chronos_id)
+        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
         change_set = set(target_events).intersection(set(source_events))
         changed = {}
 
@@ -188,7 +188,7 @@ class AppFactory:
 
         return changed
 
-    def _delete_target_events(self, cal_handler: BaseCalendarHandler) -> dict:
+    def _delete_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> dict:
         """delete target iCal events that are not in source calendar (any more)"""
 
         wipe_on_target = self.app_config.get("calendars", "delete_on_target")
@@ -196,7 +196,7 @@ class AppFactory:
             return {}
 
         source_events = cal_handler.get_events_data()
-        target_events = self.target.search_events_by_calid(cal_handler.chronos_id)
+        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
         delete_set = set(target_events).difference(set(source_events))
         deleted = {}
 
@@ -212,11 +212,11 @@ class AppFactory:
 
         return deleted
 
-    def _create_target_events(self, cal_handler: BaseCalendarHandler) -> dict:
+    def _create_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> dict:
         """create iCal events that are only in source calendar"""
 
         source_events = cal_handler.get_events_data()
-        target_events = self.target.search_events_by_calid(cal_handler.chronos_id)
+        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
         new_set = set(source_events).difference(set(target_events))
         new_events: dict[icalendar.vText, BaseChronosEvent] = {}
 
@@ -242,7 +242,7 @@ class AppFactory:
 
                 _cal.add_component(vevent)
                 _new = _cal.to_ical()
-                self.target.calendar.add_event(_new, no_overwrite=True, no_create=False)
+                target_cal_handler.calendar.add_event(_new, no_overwrite=True, no_create=False)
                 logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
                 new_events[event_id] = new_event
             except Exception as ex:
