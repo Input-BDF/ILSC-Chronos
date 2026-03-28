@@ -141,9 +141,10 @@ class AppFactory:
 
     def sync_calendars(self) -> None:
         app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
+        show_trace = self.app_config.get("log", "show_tracebacks")
         all_calendars = self.source_readable_calendars + self.source_writable_calendars
         for calendar in all_calendars:
-            changed, deleted, new = self.sync_calendar(calendar, self.target)
+            changed, deleted, new = self.sync_calendar(calendar, self.target, show_trace)
             calendar.last_check = dt.datetime.now().astimezone(app_timezone)
 
             msg = f'Done comparing with "{calendar.cal_name}". '
@@ -152,17 +153,22 @@ class AppFactory:
             msg += f"{len(deleted)} entries deleted."
             logger.success(msg)
 
-    def sync_calendar(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> tuple[dict, dict, dict]:
+    def sync_calendar(
+        self,
+        cal_handler: BaseCalendarHandler,
+        target_cal_handler: CalDavCalendarHandler,
+        show_trace: bool,
+    ) -> tuple[dict, dict, dict]:
         # Update target calendar events from source calendar
-        changed_events = self._update_target_events(cal_handler, target_cal_handler)
+        changed_events = self._update_target_events(cal_handler, target_cal_handler, show_trace)
         # delete iCal event not in source calendar
-        deleted_events = self._delete_target_events(cal_handler, target_cal_handler)
+        deleted_events = self._delete_target_events(cal_handler, target_cal_handler, show_trace)
         # create iCal event only in source calendar
-        new_events = self._create_target_events(cal_handler, target_cal_handler)
+        new_events = self._create_target_events(cal_handler, target_cal_handler, show_trace)
 
         return changed_events, deleted_events, new_events
 
-    def _update_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> dict:
+    def _update_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler, show_trace: bool) -> dict:
         """Update existing target calendar events"""
 
         source_events = cal_handler.get_events_data()
@@ -184,11 +190,11 @@ class AppFactory:
 
                     logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
                 except Exception as ex:
-                    logger.error(f"Could not update event: {ex}")
+                    logger.error(f"Could not update event: {ex}", exc_info=show_trace)
 
         return changed
 
-    def _delete_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> dict:
+    def _delete_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler, show_trace: bool) -> dict:
         """delete target iCal events that are not in source calendar (any more)"""
 
         wipe_on_target = self.app_config.get("calendars", "delete_on_target")
@@ -208,11 +214,11 @@ class AppFactory:
                     logger.info(f"Deleted: {delete_event.date} | {delete_event.safe_title}")
                     deleted[event_id] = delete_event
             except Exception as ex:
-                logger.error(f"Could not delete obsolete event: {ex}")
+                logger.error(f"Could not delete obsolete event: {ex}", exc_info=show_trace)
 
         return deleted
 
-    def _create_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler) -> dict:
+    def _create_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: CalDavCalendarHandler, show_trace: bool) -> dict:
         """create iCal events that are only in source calendar"""
 
         source_events = cal_handler.get_events_data()
@@ -246,7 +252,7 @@ class AppFactory:
                 logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
                 new_events[event_id] = new_event
             except Exception as ex:
-                logger.error(f"Could not create new event: {ex}")
+                logger.error(f"Could not create new event: {ex}", exc_info=show_trace)
                 if new_event is not None and hasattr(new_event, "title") and hasattr(new_event, "date"):
                     logger.error(f"Affected event: {new_event.safe_title} {new_event.date}")
 
