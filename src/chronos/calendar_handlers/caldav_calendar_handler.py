@@ -209,3 +209,108 @@ class CalDavCalendarHandler(BaseCalendarHandler):
     def close_connection(self) -> None:
         if self.client is not None:
             self.client.close()
+
+    def sync_calendar(
+        self,
+        cal_handler: BaseCalendarHandler,
+        target_cal_handler: "CalDavCalendarHandler",
+        show_trace: bool,
+    ) -> tuple[dict, dict, dict]:
+        # Update target calendar events from source calendar
+        changed_events = self._update_target_events(cal_handler, target_cal_handler, show_trace)
+        # delete iCal event not in source calendar
+        deleted_events = self._delete_target_events(cal_handler, target_cal_handler, show_trace)
+        # create iCal event only in source calendar
+        new_events = self._create_target_events(cal_handler, target_cal_handler, show_trace)
+
+        return changed_events, deleted_events, new_events
+
+    def _update_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: "CalDavCalendarHandler", show_trace: bool) -> dict:
+        """Update existing target calendar events"""
+
+        source_events = cal_handler.get_events_data()
+        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
+        change_set = set(target_events).intersection(set(source_events))
+        changed: dict[str, BaseChronosEvent] = {}
+
+        for event_id in change_set:
+            target_event = target_events[event_id]
+            source_event = source_events[event_id]
+
+            # TODO: (Re)Implement respect remote changes
+            # if source_event.last_modified > target_event.last_modified and not target_event.remote_changed:
+            if source_event.last_modified > target_event.last_modified:
+                try:
+                    # updated_event = target_event.update_calDaV_event(source_event)
+                    updated_event = target_cal_handler.update_remote_event(target_event, source_event)
+                    changed[event_id] = updated_event
+
+                    logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
+                except Exception as ex:
+                    logger.error(f"Could not update event: {ex}", exc_info=show_trace)
+
+        return changed
+
+    def _delete_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: "CalDavCalendarHandler", show_trace: bool) -> dict:
+        """delete target iCal events that are not in source calendar (any more)"""
+
+        wipe_on_target = self.app_config.get("calendars", "delete_on_target")
+        if not wipe_on_target:
+            return {}
+
+        source_events = cal_handler.get_events_data()
+        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
+        delete_set = set(target_events).difference(set(source_events))
+        deleted: dict[str, BaseChronosEvent] = {}
+
+        for event_id in delete_set:
+            try:
+                if target_events[event_id].is_chronos_origin:
+                    delete_event = target_events[event_id]
+                    delete_event.calDAV.delete()
+                    logger.info(f"Deleted: {delete_event.date} | {delete_event.safe_title}")
+                    deleted[event_id] = delete_event
+            except Exception as ex:
+                logger.error(f"Could not delete obsolete event: {ex}", exc_info=show_trace)
+
+        return deleted
+
+    def _create_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: "CalDavCalendarHandler", show_trace: bool) -> dict:
+        """create iCal events that are only in source calendar"""
+
+        source_events = cal_handler.get_events_data()
+        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
+        new_set = set(source_events).difference(set(target_events))
+        new_events: dict[str, BaseChronosEvent] = {}
+
+        for event_id in new_set:
+            new_event = source_events[event_id]
+            if not (new_event.has_title):
+                logger.debug(f"Ignoring event without title: {new_event.date}")
+                continue
+            if new_event.is_confidential:
+                logger.debug(f"Ignoring confidential event: {new_event.date}")
+                continue
+            if new_event.is_excluded:
+                logger.debug(f"Ignoring event excluded by tag: {new_event.date}")
+                continue
+            if (cal_handler.ignore_planned and new_event.is_planned) or new_event.is_canceled:
+                logger.debug(f"Ignoring {new_event.status} event: {new_event.date} | {new_event.safe_title}")
+                # skip planned events
+                continue
+
+            try:
+                _cal = icalendar.Calendar()
+                vevent = new_event.create_ical_event()
+
+                _cal.add_component(vevent)
+                _new = _cal.to_ical()
+                target_cal_handler.calendar.add_event(_new, no_overwrite=True, no_create=False)
+                logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
+                new_events[event_id] = new_event
+            except Exception as ex:
+                logger.error(f"Could not create new event: {ex}", exc_info=show_trace)
+                if new_event is not None and hasattr(new_event, "title") and hasattr(new_event, "date"):
+                    logger.error(f"Affected event: {new_event.safe_title} {new_event.date}")
+
+        return new_events
