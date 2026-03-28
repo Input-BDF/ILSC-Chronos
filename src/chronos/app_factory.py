@@ -144,7 +144,7 @@ class AppFactory:
         show_trace = self.app_config.get("log", "show_tracebacks")
         all_calendars = self.source_readable_calendars + self.source_writable_calendars
         for calendar in all_calendars:
-            changed, deleted, new = self.target.sync_calendar(calendar, self.target, show_trace)
+            changed, deleted, new = self.target.sync_calendar(calendar, show_trace)
             calendar.last_check = dt.datetime.now().astimezone(app_timezone)
 
             msg = f'Done comparing with "{calendar.cal_name}". '

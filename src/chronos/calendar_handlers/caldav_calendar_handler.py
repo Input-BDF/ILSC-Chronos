@@ -210,26 +210,21 @@ class CalDavCalendarHandler(BaseCalendarHandler):
         if self.client is not None:
             self.client.close()
 
-    def sync_calendar(
-        self,
-        cal_handler: BaseCalendarHandler,
-        target_cal_handler: "CalDavCalendarHandler",
-        show_trace: bool,
-    ) -> tuple[dict, dict, dict]:
+    def sync_calendar(self, cal_handler: BaseCalendarHandler, show_trace: bool) -> tuple[dict, dict, dict]:
         # Update target calendar events from source calendar
-        changed_events = self._update_target_events(cal_handler, target_cal_handler, show_trace)
+        changed_events = self._update_target_events(cal_handler, show_trace)
         # delete iCal event not in source calendar
-        deleted_events = self._delete_target_events(cal_handler, target_cal_handler, show_trace)
+        deleted_events = self._delete_target_events(cal_handler, show_trace)
         # create iCal event only in source calendar
-        new_events = self._create_target_events(cal_handler, target_cal_handler, show_trace)
+        new_events = self._create_target_events(cal_handler, show_trace)
 
         return changed_events, deleted_events, new_events
 
-    def _update_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: "CalDavCalendarHandler", show_trace: bool) -> dict:
+    def _update_target_events(self, cal_handler: BaseCalendarHandler, show_trace: bool) -> dict:
         """Update existing target calendar events"""
 
         source_events = cal_handler.get_events_data()
-        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
+        target_events = self.search_events_by_calid(cal_handler.chronos_id)
         change_set = set(target_events).intersection(set(source_events))
         changed: dict[str, BaseChronosEvent] = {}
 
@@ -242,7 +237,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
             if source_event.last_modified > target_event.last_modified:
                 try:
                     # updated_event = target_event.update_calDaV_event(source_event)
-                    updated_event = target_cal_handler.update_remote_event(target_event, source_event)
+                    updated_event = self.update_remote_event(target_event, source_event)
                     changed[event_id] = updated_event
 
                     logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
@@ -251,7 +246,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
 
         return changed
 
-    def _delete_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: "CalDavCalendarHandler", show_trace: bool) -> dict:
+    def _delete_target_events(self, cal_handler: BaseCalendarHandler, show_trace: bool) -> dict:
         """delete target iCal events that are not in source calendar (any more)"""
 
         wipe_on_target = self.app_config.get("calendars", "delete_on_target")
@@ -259,7 +254,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
             return {}
 
         source_events = cal_handler.get_events_data()
-        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
+        target_events = self.search_events_by_calid(cal_handler.chronos_id)
         delete_set = set(target_events).difference(set(source_events))
         deleted: dict[str, BaseChronosEvent] = {}
 
@@ -275,11 +270,11 @@ class CalDavCalendarHandler(BaseCalendarHandler):
 
         return deleted
 
-    def _create_target_events(self, cal_handler: BaseCalendarHandler, target_cal_handler: "CalDavCalendarHandler", show_trace: bool) -> dict:
+    def _create_target_events(self, cal_handler: BaseCalendarHandler, show_trace: bool) -> dict:
         """create iCal events that are only in source calendar"""
 
         source_events = cal_handler.get_events_data()
-        target_events = target_cal_handler.search_events_by_calid(cal_handler.chronos_id)
+        target_events = self.search_events_by_calid(cal_handler.chronos_id)
         new_set = set(source_events).difference(set(target_events))
         new_events: dict[str, BaseChronosEvent] = {}
 
@@ -305,7 +300,7 @@ class CalDavCalendarHandler(BaseCalendarHandler):
 
                 _cal.add_component(vevent)
                 _new = _cal.to_ical()
-                target_cal_handler.calendar.add_event(_new, no_overwrite=True, no_create=False)
+                self.calendar.add_event(_new, no_overwrite=True, no_create=False)
                 logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
                 new_events[event_id] = new_event
             except Exception as ex:
