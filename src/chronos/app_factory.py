@@ -152,20 +152,21 @@ class AppFactory:
             msg += f"{len(deleted)} entries deleted."
             logger.success(msg)
 
-    def sync_calendar(self, calendar: BaseCalendarHandler) -> tuple[dict, dict, dict]:
+    def sync_calendar(self, cal_handler: BaseCalendarHandler) -> tuple[dict, dict, dict]:
         # Update target calendar events from source calendar
-        changed_events = self._update_target_events(calendar)
+        changed_events = self._update_target_events(cal_handler)
         # delete iCal event not in source calendar
-        deleted_events = self._delete_target_events(calendar)
+        deleted_events = self._delete_target_events(cal_handler)
         # create iCal event only in source calendar
-        new_events = self._create_target_events(calendar)
+        new_events = self._create_target_events(cal_handler)
+
         return changed_events, deleted_events, new_events
 
-    def _update_target_events(self, calendar: BaseCalendarHandler) -> dict:
+    def _update_target_events(self, cal_handler: BaseCalendarHandler) -> dict:
         """Update existing target calendar events"""
 
-        source_events = calendar.get_events_data()
-        target_events = self.target.search_events_by_calid(calendar.chronos_id)
+        source_events = cal_handler.get_events_data()
+        target_events = self.target.search_events_by_calid(cal_handler.chronos_id)
         change_set = set(target_events).intersection(set(source_events))
         changed = {}
 
@@ -178,7 +179,7 @@ class AppFactory:
             if source_event.last_modified > target_event.last_modified:
                 try:
                     # updated_event = target_event.update_calDaV_event(source_event)
-                    updated_event = calendar.update_remote_event(target_event, source_event)
+                    updated_event = cal_handler.update_remote_event(target_event, source_event)
                     changed[event_id] = updated_event
 
                     logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
@@ -187,15 +188,15 @@ class AppFactory:
 
         return changed
 
-    def _delete_target_events(self, calendar: BaseCalendarHandler) -> dict:
+    def _delete_target_events(self, cal_handler: BaseCalendarHandler) -> dict:
         """delete target iCal events that are not in source calendar (any more)"""
 
         wipe_on_target = self.app_config.get("calendars", "delete_on_target")
         if not wipe_on_target:
             return {}
 
-        source_events = calendar.get_events_data()
-        target_events = self.target.search_events_by_calid(calendar.chronos_id)
+        source_events = cal_handler.get_events_data()
+        target_events = self.target.search_events_by_calid(cal_handler.chronos_id)
         delete_set = set(target_events).difference(set(source_events))
         deleted = {}
 
@@ -211,11 +212,11 @@ class AppFactory:
 
         return deleted
 
-    def _create_target_events(self, calendar: BaseCalendarHandler) -> dict:
+    def _create_target_events(self, cal_handler: BaseCalendarHandler) -> dict:
         """create iCal events that are only in source calendar"""
 
-        source_events = calendar.get_events_data()
-        target_events = self.target.search_events_by_calid(calendar.chronos_id)
+        source_events = cal_handler.get_events_data()
+        target_events = self.target.search_events_by_calid(cal_handler.chronos_id)
         new_set = set(source_events).difference(set(target_events))
         new_events: dict[icalendar.vText, BaseChronosEvent] = {}
 
@@ -230,7 +231,7 @@ class AppFactory:
             if new_event.is_excluded:
                 logger.debug(f"Ignoring event excluded by tag: {new_event.date}")
                 continue
-            if (calendar.ignore_planned and new_event.is_planned) or new_event.is_canceled:
+            if (cal_handler.ignore_planned and new_event.is_planned) or new_event.is_canceled:
                 logger.debug(f"Ignoring {new_event.status} event: {new_event.date} | {new_event.safe_title}")
                 # skip planned events
                 continue
