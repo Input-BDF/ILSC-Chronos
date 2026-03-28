@@ -14,15 +14,12 @@ import time
 import zoneinfo
 
 # external libs
-import icalendar
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # own code
-from chronos.calendar_handlers.base_calendar_handler import BaseCalendarHandler
 from chronos.calendar_handlers.caldav_calendar_handler import CalDavCalendarHandler
 from chronos.calendar_handlers.ics_calendar_handler import IcsCalendarHandler
 from chronos.config import Config
-from chronos.events.base_chronos_event import BaseChronosEvent
 
 logger = logging.getLogger(__name__)
 
@@ -141,9 +138,10 @@ class AppFactory:
 
     def sync_calendars(self) -> None:
         app_timezone = zoneinfo.ZoneInfo(self.app_config.get("app", "timezone"))
+        show_trace = self.app_config.get("log", "show_tracebacks")
         all_calendars = self.source_readable_calendars + self.source_writable_calendars
         for calendar in all_calendars:
-            changed, deleted, new = self.sync_calendar(calendar)
+            changed, deleted, new = self.target.sync_calendar(calendar, show_trace)
             calendar.last_check = dt.datetime.now().astimezone(app_timezone)
 
             msg = f'Done comparing with "{calendar.cal_name}". '
@@ -151,102 +149,3 @@ class AppFactory:
             msg += f"{len(new)} entries added. "
             msg += f"{len(deleted)} entries deleted."
             logger.success(msg)
-
-    def sync_calendar(self, calendar: BaseCalendarHandler) -> tuple[dict, dict, dict]:
-        # Update target calendar events from source calendar
-        changed_events = self._update_target_events(calendar)
-        # delete iCal event not in source calendar
-        deleted_events = self._delete_target_events(calendar)
-        # create iCal event only in source calendar
-        new_events = self._create_target_events(calendar)
-        return changed_events, deleted_events, new_events
-
-    def _update_target_events(self, calendar: BaseCalendarHandler) -> dict:
-        """Update existing target calendar events"""
-
-        source_events = calendar.get_events_data()
-        target_events = self.target.search_events_by_calid(calendar.chronos_id)
-        change_set = set(target_events).intersection(set(source_events))
-        changed = {}
-
-        for event_id in change_set:
-            target_event = target_events[event_id]
-            source_event = source_events[event_id]
-
-            # TODO: (Re)Implement respect remote changes
-            # if source_event.last_modified > target_event.last_modified and not target_event.remote_changed:
-            if source_event.last_modified > target_event.last_modified:
-                try:
-                    # updated_event = target_event.update_calDaV_event(source_event)
-                    updated_event = calendar.update_remote_event(target_event, source_event)
-                    changed[event_id] = updated_event
-
-                    logger.info(f"Updated: {updated_event.date} | {updated_event.safe_title}")
-                except Exception as ex:
-                    logger.error(f"Could not update event: {ex}")
-
-        return changed
-
-    def _delete_target_events(self, calendar: BaseCalendarHandler) -> dict:
-        """delete target iCal events that are not in source calendar (any more)"""
-
-        wipe_on_target = self.app_config.get("calendars", "delete_on_target")
-        if not wipe_on_target:
-            return {}
-
-        source_events = calendar.get_events_data()
-        target_events = self.target.search_events_by_calid(calendar.chronos_id)
-        delete_set = set(target_events).difference(set(source_events))
-        deleted = {}
-
-        for event_id in delete_set:
-            try:
-                if target_events[event_id].is_chronos_origin:
-                    delete_event = target_events[event_id]
-                    delete_event.calDAV.delete()
-                    logger.info(f"Deleted: {delete_event.date} | {delete_event.safe_title}")
-                    deleted[event_id] = delete_event
-            except Exception as ex:
-                logger.error(f"Could not delete obsolete event: {ex}")
-
-        return deleted
-
-    def _create_target_events(self, calendar: BaseCalendarHandler) -> dict:
-        """create iCal events that are only in source calendar"""
-
-        source_events = calendar.get_events_data()
-        target_events = self.target.search_events_by_calid(calendar.chronos_id)
-        new_set = set(source_events).difference(set(target_events))
-        new_events: dict[icalendar.vText, BaseChronosEvent] = {}
-
-        for event_id in new_set:
-            new_event = source_events[event_id]
-            if not (new_event.has_title):
-                logger.debug(f"Ignoring event without title: {new_event.date}")
-                continue
-            if new_event.is_confidential:
-                logger.debug(f"Ignoring confidential event: {new_event.date}")
-                continue
-            if new_event.is_excluded:
-                logger.debug(f"Ignoring event excluded by tag: {new_event.date}")
-                continue
-            if (calendar.ignore_planned and new_event.is_planned) or new_event.is_canceled:
-                logger.debug(f"Ignoring {new_event.status} event: {new_event.date} | {new_event.safe_title}")
-                # skip planned events
-                continue
-
-            try:
-                _cal = icalendar.Calendar()
-                vevent = new_event.create_ical_event()
-
-                _cal.add_component(vevent)
-                _new = _cal.to_ical()
-                self.target.calendar.add_event(_new, no_overwrite=True, no_create=False)
-                logger.info(f"Created: {new_event.date} | {new_event.safe_title}")
-                new_events[event_id] = new_event
-            except Exception as ex:
-                logger.error(f"Could not create new event: {ex}")
-                if new_event is not None and hasattr(new_event, "title") and hasattr(new_event, "date"):
-                    logger.error(f"Affected event: {new_event.safe_title} {new_event.date}")
-
-        return new_events

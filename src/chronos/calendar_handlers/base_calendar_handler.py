@@ -25,10 +25,6 @@ class BaseCalendarHandler(abc.ABC):
         self.last_check = (dt.datetime.now() - dt.timedelta(days=7)).astimezone(app_timezone)
         self.cal_timezone_info = zoneinfo.ZoneInfo("UTC")
 
-        self.client = None
-        self.calendar = None
-        self.principal = None
-
         # derived from calendars.json
         self.cal_primary = None
         self.cal_name = None
