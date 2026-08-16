@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import datetime as dt
+import warnings
 import zoneinfo
 from html.parser import HTMLParser
 from logging import Logger
 
 import regex
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 
 from chronos.config import Config
+
+warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
 
 def convert_to_date_or_timezone_datetime(date_or_datetime: dt.date | dt.datetime, time_zone: zoneinfo.ZoneInfo) -> dt.date | dt.datetime:
