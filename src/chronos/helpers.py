@@ -114,7 +114,7 @@ def sanitize_link_with_line_breaks(text_input: str) -> str:
         if anchor_url != sanitized_anchor_text:
             replacement_text = f"{sanitized_anchor_text} ({anchor_url})"
 
-        replacement_text += " " + "\\n" * amount_line_breaks
+        replacement_text += " " + "\n" * amount_line_breaks
         print(replacement_text)
 
         data.string = str(replacement_text)
