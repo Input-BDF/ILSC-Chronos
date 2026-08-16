@@ -301,15 +301,15 @@ class BaseChronosEvent(abc.ABC):
         return first.copy() + list(set(self.categories) - set(first))
 
     def sanitize_description(self) -> icalendar.vText:
-        _desc = self.description.to_ical()
+        raw_description = self.description.to_ical()
         try:
-            _desc = _desc.decode("utf-8")
+            description = raw_description.decode("utf-8")
         except Exception:
-            _desc = str(_desc)
+            description = str(description)
 
-        _desc = helpers.remove_html_from_description(_desc)
+        description = helpers.remove_html_from_description(description)
 
-        nocmt = helpers.remove_multi_line_comments(_desc)
+        nocmt = helpers.remove_multi_line_comments(description)
         nocmt = helpers.remove_single_line_comments(nocmt)
         nocmt = helpers.strip_newlines(nocmt)
 
