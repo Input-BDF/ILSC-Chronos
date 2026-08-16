@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import datetime as dt
+import zoneinfo
 from html.parser import HTMLParser
 from logging import Logger
-import zoneinfo
 
-from bs4 import BeautifulSoup
 import regex
+from bs4 import BeautifulSoup
 
 from chronos.config import Config
 
