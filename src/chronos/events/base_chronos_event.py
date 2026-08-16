@@ -307,6 +307,7 @@ class BaseChronosEvent(abc.ABC):
         except Exception:
             description = str(description)
 
+        description = helpers.replace_special_characters_in_description(description)
         description = helpers.remove_html_from_description(description)
 
         nocmt = helpers.remove_multi_line_comments(description)
