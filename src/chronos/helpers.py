@@ -109,8 +109,8 @@ def sanitize_link_with_line_breaks(text_input: str) -> str:
             continue
 
         replacement_text = anchor_url
-        amount_line_breaks = anchor_text.count("\\n")
-        sanitized_anchor_text = anchor_text.replace("\\n", "")
+        amount_line_breaks = anchor_text.count("\n")
+        sanitized_anchor_text = anchor_text.replace("\n", "")
         if anchor_url != sanitized_anchor_text:
             replacement_text = f"{sanitized_anchor_text} ({anchor_url})"
 
@@ -119,18 +119,18 @@ def sanitize_link_with_line_breaks(text_input: str) -> str:
 
         data.string = str(replacement_text)
 
-    text_without_links = "".join(soup.stripped_strings)
+    text_without_links = soup.get_text()
     return text_without_links
 
 
 def remove_html_from_description(text_input: str) -> str:
-    """remove replace HTML line breaks and remove HTML tags"""
+    """replace HTML line breaks and remove HTML tags"""
     # handle single line breaks
-    text = text_input.replace("<br>", "\\n")
-    text = text.replace("<br/>", "\\n")
+    text = text_input.replace("<br>", "\n")
+    text = text.replace("<br/>", "\n")
 
     # handle paragraph (the HTMLFilter will take care of the <p> tag)
-    text = text.replace("</p>", "\\n</p>")
+    text = text.replace("</p>", "\n\n</p>")
 
     text_without_links = sanitize_link_with_line_breaks(text)
 
