@@ -142,6 +142,15 @@ def remove_html_from_description(text_input: str) -> str:
     return result
 
 
+def replace_special_characters_in_description(text_input: str) -> str:
+    """replace double slash characters"""
+
+    text = text_input.replace("\xa0", " ")
+    text = text.replace("\\,", ",")
+    text = text.replace("\\n", "\n")
+    return text
+
+
 def remove_multi_line_comments(text: str) -> str:
     """Remove multi-line comments"""
     _reg = r"(?:^\s*#{3}|(?<=\\n)\s*#{3})(?:\\n)?[^#]{3}.*?(?:#{3}\\n|#{3}$)"
